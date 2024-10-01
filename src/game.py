@@ -1,3 +1,3 @@
-class Env():
+class Game():
     def __init__(self):
         pass
