@@ -10,7 +10,7 @@ class Game:
     Defines game logic, turn system, trump selection and scoring.
     """
 
-    def __init__(self, players: list, starting_player_id):
+    def __init__(self, players: list[Player], starting_player_id: int):
         self.players = players  # Ordered by player_id ascending
         self.starting_player_id = starting_player_id
         self.leading_player_id = starting_player_id  # Starting player starts first trick
@@ -20,8 +20,8 @@ class Game:
         self.bottom_up = False 
         """
 
-    def play_round(self):
-        # TODO Starting player decides which game variant to play (trump_suit, top_down or bottom_up)
+    def play_round(self) -> list[int]:
+        # TODO Starting player decides which game variant to play (trump_suit, top_down or bottom_up, or schieben)
         # For now, always play bottom_up
 
         # TODO State of the game (e.g (N_CARDS, N_Players))
@@ -31,7 +31,16 @@ class Game:
         for trick_idx in range(9):
             self.play_trick(trick_idx, state)
 
-        # TODO Count points
+        # Count points
+        points_per_player = []
+        for p in self.players:
+            points_per_player.append(p.count_points())
+        # Last trick winner gets 5 additional points
+        points_per_player[self.leading_player_id] += 5
+        points_per_team = [points_per_player[0] + points_per_player[2], points_per_player[1] + points_per_player[3]]
+        assert sum(points_per_player) == 157
+
+        return points_per_team
 
     def play_trick(self, trick_idx: int, state):
         """
@@ -60,10 +69,8 @@ class Game:
         trick_winner = trick.determine_trick_winner()
         print(f"Trick won by: {trick_winner}")
         self.leading_player_id = int(trick_winner[1])
+        self.players[self.leading_player_id].append_won_trick(trick)
 
     def select_trump(self):
-        """First players selects trump suit"""
-
-        # For now random trump selection -> TODO
-        self.trump_suit = random.choice(list(Suit))
-        print(f"Trump suit: {self.trump_suit}")
+        """First player selects trump suit"""
+        pass

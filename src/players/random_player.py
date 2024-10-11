@@ -17,7 +17,6 @@ class Random_Player(Player):
         Returns:
             Card: The Card the player wants to play
         """
-
         # Starting player
         if trick.is_starting():
             # Play random card from deck
@@ -25,12 +24,11 @@ class Random_Player(Player):
             self.hand.remove(card)
             return card
         # not starting
-        else:
-            # Choose randomly from valid options
-            valid_hand = self.get_valid_hand(trick.playing_suit)
-            card = random.choice(valid_hand)
-            self.hand.remove(card)
-            return card
+        # Choose randomly from valid options
+        valid_hand = self.get_valid_hand(trick.playing_suit)
+        card = random.choice(valid_hand)
+        self.hand.remove(card)
+        return card
 
     def get_valid_hand(self, playing_suit: Suit) -> list:
         """
