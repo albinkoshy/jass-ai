@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 
-from card import Card, Rank
-from trick import Trick
+from envs.card import Card, Rank
+from envs.trick import Trick
 
 
-class Player(ABC):
-    """Interface for various kinds of Players"""
+class IPlayer(ABC):
+    """Interface for various kinds of Players. Players cannot be trained"""
 
     def __init__(self, player_id: int, team_id: int):
         self.player_id = player_id
@@ -52,7 +52,7 @@ class Player(ABC):
         return total_points
 
     @abstractmethod
-    def play_card(self, trick, state) -> Card:
+    def play_card(self, trick) -> Card:
         """
         Player decides for a card to play.
 

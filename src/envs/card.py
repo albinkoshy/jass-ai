@@ -35,6 +35,9 @@ class Card:
         self.rank = rank
         self.value = value
 
+        # To identify the card using a single number from 0 to 35
+        self.index = self.suit.value * 9 + (self.rank.value - 6)
+
     # Equality to compare two cards (useful when removing card from hand using .remove())
     def __eq__(self, other) -> bool:
         return self.suit == other.suit and self.rank == other.rank

@@ -1,4 +1,4 @@
-from card import Card, Suit
+from envs.card import Card, Rank, Suit
 
 
 class Trick:
@@ -41,5 +41,30 @@ class Trick:
                     winner_card_value = card_value
                     winner = player
             return winner
+        else:
+            raise Exception("Not all cards have been laid!")
+
+    def get_trick_points(self):
+        # Check if all cards have been laid
+        if all(value is not None for value in self.trick.values()):
+
+            # top-down
+            top_down_scoring = {
+                Rank.SECHS: 0,
+                Rank.SIEBEN: 0,
+                Rank.ACHT: 8,
+                Rank.NEUN: 0,
+                Rank.ZEHN: 10,
+                Rank.UNDER: 2,
+                Rank.OBER: 3,
+                Rank.KOENIG: 4,
+                Rank.ASS: 11,
+            }
+
+            trick_points = 0
+            for card in self.trick.values():
+                trick_points += top_down_scoring[card.get_rank()]
+
+            return trick_points
         else:
             raise Exception("Not all cards have been laid!")

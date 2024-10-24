@@ -1,6 +1,6 @@
 import random
 
-from card import Card, Rank, Suit
+from envs.card import Card, Rank, Suit
 
 
 class Deck:
@@ -10,10 +10,13 @@ class Deck:
         self.cards = [Card(s, r) for s in Suit for r in Rank]
 
         # Shuffle the card deck
-        self.shuffle_deck()
+        self._shuffle_deck()
 
-    def shuffle_deck(self):
+    def _shuffle_deck(self):
         random.shuffle(self.cards)
+
+    def order_deck(self):
+        self.cards.sort(key=lambda card: card.index)
 
     def pop_cards(self, n_cards: int) -> list[Card]:
         popped_elements = []
