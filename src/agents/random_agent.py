@@ -34,10 +34,7 @@ class Random_Agent(IAgent):
         self.hand_card_indices.remove(card_idx)
         return card_idx
 
-    def load_model(self, loadpath: str):
-        pass
-
-    def save_model(self, name: str = "", directory: str = "./saved_models/"):
+    def remember(self, state, action, reward, next_state, done):
         pass
 
     def optimize_model(self):
@@ -48,12 +45,27 @@ class Random_Agent(IAgent):
         self.is_starting_trick = None
         self.playing_suit = None
 
+    def load_model(self, loadpath: str):
+        pass
+
+    def save_model(self, name: str = "", directory: str = "./saved_models/"):
+        pass
+
     def _interpret_state(self, state):
-        self.hand_card_indices = np.where(state[0, 0, :] == 1)[0].tolist()
-        starting_card_idx = np.where(state[2, :, :] == 1)[1][0] if np.where(state[2, :, :] == 1)[1].size == 1 else None
-        self.is_starting_trick = False if starting_card_idx else True
-        if not self.is_starting_trick:
-            self.playing_suit = utils.ORDERED_CARDS[starting_card_idx].get_suit()
+        card_distribution = state[0]
+        leading_player_id = state[1] # Player who played the first card in the trick
+        play_style = state[2]
+        
+        self.hand_card_indices = np.where(card_distribution[0, 0, :] == 1)[0].tolist()
+        if leading_player_id == 0:
+            self.is_starting_trick = True
+            self.playing_suit = None
+        else:
+            leading_card_idx = np.where(card_distribution[1, leading_player_id, :] == 1)[0]
+            assert len(leading_card_idx) == 1
+            leading_card_idx = leading_card_idx[0]
+            self.is_starting_trick = False
+            self.playing_suit = utils.ORDERED_CARDS[leading_card_idx].get_suit()
 
     def _get_valid_hand_card_indices(self) -> list:
         if self.playing_suit == Suit.ROSE:  # (0, 8)

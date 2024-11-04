@@ -10,11 +10,11 @@ class IAgent(ABC):
         pass
 
     @abstractmethod
-    def load_model(self, loadpath: str):
+    def act(self, state):
         pass
 
     @abstractmethod
-    def save_model(self, name: str = "", directory: str = "./saved_models/"):
+    def remember(self, state, action, reward, next_state, done):
         pass
 
     @abstractmethod
@@ -26,5 +26,9 @@ class IAgent(ABC):
         pass
 
     @abstractmethod
-    def act(self, state):
+    def load_model(self, loadpath: str):
+        pass
+
+    @abstractmethod
+    def save_model(self, name: str = "", directory: str = "./saved_models/"):
         pass

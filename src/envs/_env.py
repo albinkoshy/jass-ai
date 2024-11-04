@@ -1,3 +1,4 @@
+import copy
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
@@ -35,11 +36,21 @@ class JassEnv(gym.Env):
         self.team0_points = 0
         self.team1_points = 0
 
+        """
+        STATE: The state of the game is represented as a list of 3 elements:
+        1. card_distribution: np.ndarray of shape (3, 4, 36)
+            - 3: n_state_of_card: {0: in hand, 1: in trick, 2: card already played}
+            - 4: n_player
+            - 36: n_cards
+        2. leading_player_id: int. Player who played the first card in the trick/is starting the trick
+        3. play_style: int. TODO: Implement different game variants
+        (maybe add additional information for the state trick number, etc.)
+        """
         self.state = None
         self.trick = None
 
-        print(f"P0: agent\nP1: {players['P1']}\nP2: {players['P2']}\nP3: {players['P3']}")
-        print(f"P{self.starting_player_id} is starting the round")
+        # print(f"P0: agent\nP1: {players['P1']}\nP2: {players['P2']}\nP3: {players['P3']}")
+        # print(f"P{self.starting_player_id} is starting the round")
 
     def reset(self):
 
@@ -59,10 +70,10 @@ class JassEnv(gym.Env):
         self.p2.receive_cards(deck.pop_cards(n_cards=9))
         self.p3.receive_cards(deck.pop_cards(n_cards=9))
 
-        print(f"P0's hand: {self.agent_hand}")
-        print(self.p1)
-        print(self.p2)
-        print(self.p3)
+        # print(f"P0's hand: {self.agent_hand}")
+        # print(self.p1)
+        # print(self.p2)
+        # print(self.p3)
 
         # Create initial state based on card distribution
         self.state = self._get_inital_state()
@@ -70,14 +81,14 @@ class JassEnv(gym.Env):
         self.trick = Trick(self.starting_player_id)
         # If agent is starting, return state and let agent begin
         if self.starting_player_id == 0:
-            return self.state
+            return copy.deepcopy(self.state)
 
         # Play until it is the agent's turn
         self._play_init_trick()
 
-        return self.state
+        return copy.deepcopy(self.state)
 
-    def step(self, action: int) -> tuple[np.ndarray, int, bool]:
+    def step(self, action: int) -> tuple[list, int, bool]:
         """
         Agents acts in the environment
 
@@ -87,7 +98,6 @@ class JassEnv(gym.Env):
         Returns:
             tuple[np.ndarray, int, bool]: Returns (next_state, reward, done)
         """
-
         # Update state using action
         self._update_state_after_play(action=action, player_id=0)
         agent_card = utils.ORDERED_CARDS[action]
@@ -96,8 +106,8 @@ class JassEnv(gym.Env):
         if self.leading_player_id == 0:
             assert self.current_turn == 0
             self.trick.set_suit(card=agent_card)
-            print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
-        print(f"P{self.current_turn} played {agent_card}")
+            # print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
+        # print(f"P{self.current_turn} played {agent_card}")
         self.current_turn += 1
 
         # Continue Trick
@@ -106,14 +116,14 @@ class JassEnv(gym.Env):
             current_player = self.players[self.current_turn - 1]
             player_card = current_player.play_card(self.trick)
             self.trick.trick[f"P{self.current_turn}"] = player_card
-            print(f"P{current_player.player_id} played {player_card}")
+            # print(f"P{current_player.player_id} played {player_card}")
 
             self._update_state_after_play(action=player_card.index, player_id=self.current_turn)
 
             self.current_turn += 1
 
         trick_winner = self.trick.determine_trick_winner()
-        print(f"Trick won by: {trick_winner}")
+        # print(f"Trick won by: {trick_winner}")
         self.leading_player_id = int(trick_winner[1])
         self.current_turn = self.leading_player_id
 
@@ -135,33 +145,36 @@ class JassEnv(gym.Env):
 
         # Determine if game is done
         done = False
-        if np.all(self.state[0, :, :] == 0):
+        if np.all(self.state[0][0, :, :] == 0) and np.all(self.state[0][1, :, :] == 0):
             done = True
 
         # If not done, start next trick
         if not done:
 
-            print(f"P0's hand: {self.agent_hand}")
-            print(self.p1)
-            print(self.p2)
-            print(self.p3)
+            # print(f"P0's hand: {self.agent_hand}")
+            # print(self.p1)
+            # print(self.p2)
+            # print(self.p3)
 
             self.trick = Trick(self.leading_player_id)
 
             # If agent is leading, return state and let agent begin
             if self.leading_player_id == 0:
-                return self.state, reward, done
+                return copy.deepcopy(self.state), reward, done
 
             # Play until it is the agent's turn
             self._play_init_trick()
         # If done, count +5 points for the last trick winner
         else:
+            assert int(np.sum(self.state[0][0, :, :])) == 0, "There should be no cards in the hand"
+            assert int(np.sum(self.state[0][1, :, :])) == 0, "There should be no cards in the trick"
             if self.leading_player_id == 0 or self.leading_player_id == 2:
+                reward += 5
                 self.team0_points += 5
             else:
                 self.team1_points += 5
 
-        return self.state, reward, done
+        return copy.deepcopy(self.state), reward, done
 
     def render(self):
         pass
@@ -177,39 +190,41 @@ class JassEnv(gym.Env):
         else:
             raise ValueError(f"Unknown player type: {player_type}")
 
-    def _get_inital_state(self) -> np.ndarray:
-        # Shape: (n_state_of_card, n_player, n_cards). n_state_of_card: {0: in hand, 1: in trick, 2: first card in trick, 3: card played}
-        init_state = np.zeros((4, 4, 36), dtype=int)
+    def _get_inital_state(self) -> list:
+        card_distribution = np.zeros((3, 4, 36), dtype=int)
 
         for card in self.agent_hand:
-            init_state[0, 0, card.index] = 1
+            card_distribution[0, 0, card.index] = 1
 
         for idx, player in enumerate([self.p1, self.p2, self.p3]):
             for card in player.hand:
-                init_state[0, idx + 1, card.index] = 1
+                card_distribution[0, idx + 1, card.index] = 1
 
         # The sum of one-hot encoded array should be always the sum of all cards (36)
-        assert int(np.sum(init_state)) == 36
-        return init_state
+        assert int(np.sum(card_distribution)) == 36
+        return [card_distribution, self.starting_player_id, 0]
 
     def _update_state_after_play(self, action: int, player_id: int):
-        if self.leading_player_id == player_id:
-            self.state[2, player_id, action] = 1
-            self.state[0, player_id, action] = 0
-        else:
-            self.state[1, player_id, action] = 1
-            self.state[0, player_id, action] = 0
-        assert int(np.sum(self.state)) == 36
+        assert self.state[0][0, player_id, action] == 1, "Card must be in hand to play it"
+        self.state[0][1, player_id, action] = 1
+        self.state[0][0, player_id, action] = 0
+        self.state[1] = self.leading_player_id
+        self.state[2] = 0
+        
+        assert int(np.sum(self.state[0])) == 36
 
     def _update_state_after_trick_ends(self):
-        self.state[3, :, :] = self.state[1, :, :] | self.state[3, :, :]
-        self.state[1, :, :] = 0
+        assert int(np.sum(self.state[0][1, :, :])) == 4, "There should be exactly 4 cards in the trick"
+        self.state[0][2, :, :] = self.state[0][1, :, :] | self.state[0][2, :, :]
+        self.state[0][1, :, :] = 0
+        self.state[1] = self.leading_player_id
+        self.state[2] = 0
 
-        self.state[3, :, :] = self.state[2, :, :] | self.state[3, :, :]
-        self.state[2, :, :] = 0
-        assert int(np.sum(self.state)) == 36
+        assert int(np.sum(self.state[0][1, :, :])) == 0, "There should be no cards in the trick"
+        assert int(np.sum(self.state[0])) == 36
 
     def _play_init_trick(self):
+        assert self.leading_player_id != 0, "Agent cannot start the trick here"
         for i in range(4):
             self.current_turn = (self.leading_player_id + i) % 4
 
@@ -221,9 +236,8 @@ class JassEnv(gym.Env):
             self.trick.trick[f"P{self.current_turn}"] = card
             if i == 0:
                 self.trick.set_suit(card=card)
-                print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
-            print(f"P{current_player.player_id} played {card}")
+            #     print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
+            # print(f"P{current_player.player_id} played {card}")
 
             self._update_state_after_play(action=card.index, player_id=self.current_turn)
-        assert int(np.sum(self.state)) == 36
-
+        assert int(np.sum(self.state[0])) == 36
