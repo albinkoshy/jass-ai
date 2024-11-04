@@ -66,7 +66,6 @@ class ReplayMemory:
         self.memory.clear()
 
     def start_optimizing(self) -> bool:
-        print(len(self))
         # Training starts when memory collected enough data.
         return self.__len__() >= self.min_capacity
 

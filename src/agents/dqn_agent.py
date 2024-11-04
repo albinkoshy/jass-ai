@@ -27,7 +27,7 @@ class DQN_Agent(IAgent):
         batch_size: int = 128,
         epsilon_max: float = 1.0,
         epsilon_min: float = 0.01,
-        epsilon_decay: float = 0.99999,
+        epsilon_decay: float = 0.999995,
         device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
@@ -102,7 +102,7 @@ class DQN_Agent(IAgent):
 
     def optimize_model(self):
         if not self.memory.start_optimizing():
-            return
+            return None
         print(f"Optimizing model {self.num_optimizations}")
         self.network.train()
         self.target_net.train()
@@ -135,6 +135,8 @@ class DQN_Agent(IAgent):
             self.epsilon *= self.epsilon_decay
 
         self.num_optimizations += 1
+        
+        return loss.item()
 
     def reset(self):
         self.hand_card_indices = None
@@ -208,8 +210,8 @@ class DQN_Agent(IAgent):
         return masked_q_values
     
     def _get_masks_for_optimization(self, states, next_states, dones) -> tuple[list, list]:
-        states_masks = []
-        for state in states:
+        states_masks = np.empty((self.batch_size, self.action_size), dtype=int)
+        for i, state in enumerate(states):
             card_distribution = state[0]
             leading_player_id = state[1]
             play_style = state[2]
@@ -219,7 +221,7 @@ class DQN_Agent(IAgent):
                 # Mask for card that is not in hand
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[hand_card_indices] = 0
-                states_masks.append(mask)
+                states_masks[i] = mask
             else:
                 leading_card_idx = np.where(card_distribution[1, leading_player_id, :] == 1)[0].tolist()
                 assert len(leading_card_idx) == 1
@@ -229,14 +231,14 @@ class DQN_Agent(IAgent):
                 valid_hand_card_indices = self._get_valid_hand_card_indices(hand_card_indices, playing_suit)
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[valid_hand_card_indices] = 0
-                states_masks.append(mask)
+                states_masks[i] = mask
         
-        next_states_masks = []
+        next_states_masks = np.empty((self.batch_size, self.action_size), dtype=int)
         for j, state in enumerate(next_states):
             if dones[j]:
                 # If game is done, mask all actions as invalid
                 mask = np.ones((self.action_size,), dtype=int)
-                next_states_masks.append(mask)
+                next_states_masks[j] = mask
                 continue
             
             card_distribution = state[0]
@@ -248,7 +250,7 @@ class DQN_Agent(IAgent):
                 # Mask for card that is not in hand
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[hand_card_indices] = 0
-                next_states_masks.append(mask)
+                next_states_masks[j] = mask
             else:
                 leading_card_idx = np.where(card_distribution[1, leading_player_id, :] == 1)[0].tolist()
                 assert len(leading_card_idx) == 1
@@ -258,7 +260,7 @@ class DQN_Agent(IAgent):
                 valid_hand_card_indices = self._get_valid_hand_card_indices(hand_card_indices, playing_suit)
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[valid_hand_card_indices] = 0
-                next_states_masks.append(mask)
+                next_states_masks[j] = mask
                 
         states_masks = torch.tensor(states_masks, dtype=torch.bool, device=self.device)
         next_states_masks = torch.tensor(next_states_masks, dtype=torch.bool, device=self.device)

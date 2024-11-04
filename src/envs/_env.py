@@ -160,7 +160,8 @@ class JassEnv(gym.Env):
 
             # If agent is leading, return state and let agent begin
             if self.leading_player_id == 0:
-                return copy.deepcopy(self.state), reward, done
+                normalized_reward = reward / 157
+                return copy.deepcopy(self.state), normalized_reward, done
 
             # Play until it is the agent's turn
             self._play_init_trick()
@@ -174,7 +175,8 @@ class JassEnv(gym.Env):
             else:
                 self.team1_points += 5
 
-        return copy.deepcopy(self.state), reward, done
+        normalized_reward = reward / 157
+        return copy.deepcopy(self.state), normalized_reward, done
 
     def render(self):
         pass
