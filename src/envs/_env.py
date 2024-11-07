@@ -35,6 +35,8 @@ class JassEnv(gym.Env):
 
         self.team0_points = 0
         self.team1_points = 0
+        
+        self.agent_points = 0
 
         """
         STATE: The state of the game is represented as a list of 3 elements:
@@ -56,6 +58,8 @@ class JassEnv(gym.Env):
 
         self.team0_points = 0
         self.team1_points = 0
+        
+        self.agent_points = 0
 
         self.state = None
         self.trick = None
@@ -133,6 +137,7 @@ class JassEnv(gym.Env):
         # If agent won trick: reward = trickpoints
         if self.leading_player_id == 0:
             reward = self.trick.get_trick_points()
+            self.agent_points += reward
             self.team0_points += reward
         # If partner won trick: reward = trickpoints
         elif self.leading_player_id == 2:
@@ -160,23 +165,28 @@ class JassEnv(gym.Env):
 
             # If agent is leading, return state and let agent begin
             if self.leading_player_id == 0:
-                normalized_reward = reward / 157
-                return copy.deepcopy(self.state), normalized_reward, done
+                return copy.deepcopy(self.state), 0, done
 
             # Play until it is the agent's turn
             self._play_init_trick()
+            
+            return copy.deepcopy(self.state), 0, done
         # If done, count +5 points for the last trick winner
         else:
             assert int(np.sum(self.state[0][0, :, :])) == 0, "There should be no cards in the hand"
             assert int(np.sum(self.state[0][1, :, :])) == 0, "There should be no cards in the trick"
-            if self.leading_player_id == 0 or self.leading_player_id == 2:
+            if self.leading_player_id == 0:
+                reward += 5
+                self.agent_points += 5
+                self.team0_points += 5
+            elif self.leading_player_id == 2:
                 reward += 5
                 self.team0_points += 5
             else:
                 self.team1_points += 5
 
-        normalized_reward = reward / 157
-        return copy.deepcopy(self.state), normalized_reward, done
+            self.agent_points = self.agent_points / 157 if self.agent_points > (157//4) else 0
+            return copy.deepcopy(self.state), self.agent_points, done
 
     def render(self):
         pass
