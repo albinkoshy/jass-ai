@@ -21,10 +21,13 @@ class DQN_Agent(IAgent):
         deterministic: bool = False,
         hidden_size: int = 256,
         hidden_layers: int = 3,
-        batch_size: int = 128,
+        batch_size: int = 256,
         epsilon_max: float = 1.0,
         epsilon_min: float = 0.01,
-        epsilon_decay: float = 0.999995,
+        epsilon_decay: float = 0.99999,
+        gamma: float = 1.0,
+        tau: float = 5e-3,
+        lr: float = 1e-4,
         device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
@@ -48,15 +51,15 @@ class DQN_Agent(IAgent):
         self.epsilon = epsilon_max
         self.epsilon_decay = epsilon_decay
 
+        # Parameters
+        self.gamma = gamma  # Discount rate (to weigh each trick equally set =1, since there are only 9 tricks in one round)
+        self.tau = tau  # Soft update param
+        self.lr = lr  # Optimizer learning rate
+        
         self.device = device
 
         # Replay Memory
-        self.memory = ReplayMemory(max_capacity=50000, min_capacity=200, device=self.device)
-
-        # Parameters
-        self.gamma = 1  # Discount rate (to weigh each trick equally, since there are only 9 tricks in one round)
-        self.tau = 1e-3  # Soft update param
-        self.lr = 0.01  # Optimizer learning rate
+        self.memory = ReplayMemory(max_capacity=50000, min_capacity=self.batch_size, device=self.device)
 
         self.num_optimizations = 0
 
@@ -64,7 +67,7 @@ class DQN_Agent(IAgent):
         self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_size, self.hidden_layers).eval().to(self.device)
         self.target_net.load_state_dict(self.network.state_dict())
 
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.MSELoss(reduction='sum')
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.lr)
 
     def act(self, state):
@@ -91,8 +94,6 @@ class DQN_Agent(IAgent):
         return action
 
     def remember(self, state: dict, action: int, reward, next_state: dict, done):
-        state = self._encode_state(state)
-        next_state = self._encode_state(next_state)
         self.memory.push(state, action, reward, next_state, done)
 
     def optimize_model(self):
@@ -133,7 +134,6 @@ class DQN_Agent(IAgent):
         
         return loss.item()
         
-
     def reset(self):
         self.hand = None
         self.is_starting_trick = None
@@ -147,8 +147,12 @@ class DQN_Agent(IAgent):
     def load_model(self, loadpath: str):
         pass
 
-    def save_model(self, name: str = "", directory: str = "./saved_models/"):
-        pass
+    def save_model(self, name: str, directory: str):
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+            
+        file_path = os.path.join(directory, name)
+        torch.save(self.network.state_dict(), file_path)
     
     def _interpret_state(self, state):
         

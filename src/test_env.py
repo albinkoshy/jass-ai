@@ -5,7 +5,7 @@ from agents.dqn_agent import DQN_Agent
 from envs.jassenv import JassEnv
 
 N_EPISODES = 1000
-PRINT_GLOBALS = False
+PRINT_ENV = False
 
 """ Test JassEnv and different agents """
     
@@ -21,7 +21,7 @@ players = [Random_Agent(player_id=0, team_id=0),
             Random_Agent(player_id=3, team_id=1)]
 
 # Initialize the environment
-env = JassEnv(players=players, print_globals=PRINT_GLOBALS)
+env = JassEnv(players=players, print_globals=PRINT_ENV)
 starting_player_id = 0
 
 rewards_list = []

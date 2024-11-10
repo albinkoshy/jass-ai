@@ -18,6 +18,8 @@ class JassEnv:
         self.n_tricks = None
         
         self.rewards = None
+        
+        self.reward_won_last_trick = None
 
     def reset(self, starting_player_id) -> dict:
         """
@@ -90,7 +92,10 @@ class JassEnv:
             self.leading_player_id = trick_winner_id
             self.current_turn = trick_winner_id
             
-            self.rewards[trick_winner_id] += self.trick.get_trick_points()
+            trick_points = self.trick.get_trick_points()
+            self.rewards[trick_winner_id] += trick_points
+            self.reward_won_last_trick = [0, 0, 0, 0]
+            self.reward_won_last_trick[trick_winner_id] = trick_points
             
             if self.print_globals and self.n_tricks < 9:
                 print(f"P{trick_winner_id} won {self.n_tricks}.trick")
@@ -113,7 +118,7 @@ class JassEnv:
                     print(f"P{trick_winner_id} won {self.n_tricks}.trick")
                     print(f"Final points distribution: {self.rewards}")
                 
-                return self._get_state(), self.rewards, done # For now, only return rewards at the end of the game
+                return self._get_state(), self.reward_won_last_trick, done
             
             # Start a new trick
             self.trick = Trick(leading_player_id=self.leading_player_id)
@@ -122,10 +127,10 @@ class JassEnv:
                 self._print_hands()
                 print(f"P{self.leading_player_id} is leading the round")
             
-            return self._get_state(), [0, 0, 0, 0], False
+            return self._get_state(), self.reward_won_last_trick, False
         else:
             # Continue playing the trick            
-            return self._get_state(), [0, 0, 0, 0], False
+            return self._get_state(), self.reward_won_last_trick, False
 
     def _update_env_after_play(self, action: int, player_id: int):
         # Remove card from player's hand

@@ -1,24 +1,21 @@
 import copy
 import os
-import numpy as np
+import random
 import argparse
 from collections import deque
 import torch
+from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 from agents.random_agent import Random_Agent
+from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
 from envs.jassenv import JassEnv
 import utils
 
-utils.seed_everything(99, deterministic=False)
+utils.seed_everything(random.randint(1, 999999), deterministic=False)
 
-NUM_EPISODES = 1000000
-
-# Configuration
-TRAIN_CONFIG = {
-    
-}
+PRINT_ENV = False
 
 def train_agent(args):
     # Use GPU if available
@@ -29,18 +26,36 @@ def train_agent(args):
     # P3  P1
     #   P0
     
+    N_EPISODES = args.n_episodes
+    
+    percentage_above_epsilon_min: float = 0.8
+    epsilon_min: float = 0.01
+    epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
+    
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    players = [Random_Agent(player_id=0, team_id=0),
-               Random_Agent(player_id=1, team_id=1),
-               Random_Agent(player_id=2, team_id=0),
-               Random_Agent(player_id=3, team_id=1)]
+    dqn_agent = DQN_Agent(player_id=0, team_id=0, epsilon_decay=epsilon_decay, gamma=1.0, tau=args.tau, lr=args.lr, device=device)
+    
+    players = [dqn_agent,
+               Greedy_Agent(player_id=1, team_id=1),
+               Greedy_Agent(player_id=2, team_id=0),
+               Greedy_Agent(player_id=3, team_id=1)]
     
     # Initialize the environment
-    env = JassEnv(players=players)
+    env = JassEnv(players=players, print_globals=PRINT_ENV)
     starting_player_id = 0
     
+    
+    writer = SummaryWriter(os.path.join(args.log_dir, "tensorboard"))
+    
+    print("Training agent...")
+    # Summary of used hyperparameters
+    print("Hyperparameters:")
+    print(f"    Tau: {args.tau}")
+    print(f"    Learning rate: {args.lr}")
+    print(f"    Log directory: {args.log_dir}")
+    
     # Training loop
-    for episode in range(NUM_EPISODES):
+    for episode in tqdm(range(N_EPISODES), desc="Training Episodes"):
         
         state = env.reset(starting_player_id=starting_player_id)
         current_turn = env.get_current_turn()
@@ -70,7 +85,7 @@ def train_agent(args):
             state_action_pairs[f"P{current_turn}"]["action"] = action
             
             new_state, rewards, done = env.step(action) # The environment changes the state
-
+            
             current_turn = env.get_current_turn()
 
             state = copy.deepcopy(new_state)
@@ -84,14 +99,33 @@ def train_agent(args):
             done = True
             player.remember(state_, action, reward, next_state, done)
         
+        # Train the agent after each episode
+        for player in players:
+            loss = player.optimize_model()
+            
+            if episode % (N_EPISODES // 10000) == 0:
+                if loss is not None:
+                    writer.add_scalar(f"Loss/P{player.player_id}", loss, episode)
+                    writer.add_scalar(f"Epsilon/P{player.player_id}", player.epsilon, episode)
+        
+        if episode % (N_EPISODES // 10) == 0:
+            # Save the model
+            for player in players:
+                # Save to log_dir
+                directory = os.path.join(args.log_dir, f"models/P{player.player_id}_{player.__class__.__name__}")
+                player.save_model(name=f"dqn_agent_{episode}_{player.player_id}", directory=directory)
+                
         starting_player_id = (starting_player_id + 1) % 4
+            
             
 if __name__ == "__main__":
     
-    parser = argparse.ArgumentParser(description='Train Jass agent')
+    parser = argparse.ArgumentParser(description='Train agent')
     # Add arguments
-    #parser.add_argument('--model', type=str, default='dqn', help='Model to train')
-    
+    parser.add_argument('--n_episodes', type=int, default=10000, help='Number of episodes to train the agent')
+    parser.add_argument('--tau', type=float, default=0.001, help='Soft update parameter for target network')
+    parser.add_argument('--lr', type=float, default=0.0005, help='Learning rate for the adam optimizer')
+    parser.add_argument('--log_dir', type=str, default='./logs', help='Directory to save the logs')
     args = parser.parse_args()
     
     train_agent(args)
