@@ -1,65 +1,97 @@
 import copy
 import os
 import numpy as np
-# ML libraries
+import argparse
+from collections import deque
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from collections import deque
 
 from agents.random_agent import Random_Agent
 from agents.dqn_agent import DQN_Agent
-from envs._env import JassEnv
+from envs.jassenv import JassEnv
 import utils
 
 utils.seed_everything(99, deterministic=False)
 
 NUM_EPISODES = 1000000
-# Use GPU if available
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Player table
-#   P2
-# P3  P1
-#   P0
-
-agent = DQN_Agent(player_id=0, team_id=0, device=device)
-players = {"P1": "greedy", "P2": "greedy", "P3": "greedy"}
-starting_player_id = 0
-
-writer = SummaryWriter()
-for i in range(NUM_EPISODES):
-    env = JassEnv(starting_player_id=starting_player_id, players=players)
-    state = env.reset()
-    done = False
+# Configuration
+TRAIN_CONFIG = {
     
-    total_reward = 0
-    while not done:
-        # print('\r                                                                                                                                                                                                          ', end='', flush=True)
-        # print(f'\rRunning episode {i} of {NUM_EPISODES}. Agent Parameters: Epsilon = {agent.epsilon:.6f}, Memory Size = {len(agent.memory.memory)}. AVG_total_reward = {np.average(total_rewards)}', end='', flush=True)
+}
+
+def train_agent(args):
+    # Use GPU if available
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
+    # Player table
+    #   P2
+    # P3  P1
+    #   P0
+    
+    # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
+    players = [Random_Agent(player_id=0, team_id=0),
+               Random_Agent(player_id=1, team_id=1),
+               Random_Agent(player_id=2, team_id=0),
+               Random_Agent(player_id=3, team_id=1)]
+    
+    # Initialize the environment
+    env = JassEnv(players=players)
+    starting_player_id = 0
+    
+    # Training loop
+    for episode in range(NUM_EPISODES):
         
-        action = agent.act(state)
-        next_state, reward, done = env.step(action)
+        state = env.reset(starting_player_id=starting_player_id)
+        current_turn = env.get_current_turn()
+        done = False
         
-        agent.remember(state, action, reward, next_state, done)
-        total_reward += reward
+        # Keep track of state, action pair for each player
+        state_action_pairs = {
+            "P0": {"state": None, "action": None},
+            "P1": {"state": None, "action": None},
+            "P2": {"state": None, "action": None},
+            "P3": {"state": None, "action": None}
+        }
+        
+        while not done:
             
-        state = copy.deepcopy(next_state)
-    
-    starting_player_id = (starting_player_id + 1) % 4
+            if state_action_pairs[f"P{current_turn}"]["state"] is not None:
+                state_ = copy.deepcopy(state_action_pairs[f"P{current_turn}"]["state"]) # The state before the current player played
+                action = state_action_pairs[f"P{current_turn}"]["action"] # The action the current player played before
+                reward = 0 # Reward for the current player (Reward is only given at the end of the trick)
+                next_state = copy.deepcopy(state) # The state after the current player played
+                done = False # Done is only True at the end of the game
+                players[current_turn].remember(state_, action, reward, next_state, done)
 
-    if agent.memory.start_optimizing():
-        loss = agent.optimize_model()
-        writer.add_scalar("Loss", loss, i)
-        print(f"Loss: {loss:.4f}")
-        writer.add_scalar("Epsilon", agent.epsilon, i)
+            action = players[current_turn].act(state) # The agent is NOT ALLOWED TO CHANGE THE STATE, do deep copy
+            
+            state_action_pairs[f"P{current_turn}"]["state"] = copy.deepcopy(state)
+            state_action_pairs[f"P{current_turn}"]["action"] = action
+            
+            new_state, rewards, done = env.step(action) # The environment changes the state
 
-    writer.add_scalar("Total Reward per Round", total_reward, i)
-    print(f"Total reward: {total_reward:.4f}")
-    
-    if i % 50000 == 0:
-        directory = "./src/agents/models"
-        if not os.path.isdir(directory):
-            os.mkdir(directory)
-        torch.save(agent.network.state_dict(), f"./src/agents/models/dqn_agent_{i}.pt")
+            current_turn = env.get_current_turn()
+
+            state = copy.deepcopy(new_state)
+            
+        # Remember the transition for all players
+        for player in players:
+            state_ = copy.deepcopy(state_action_pairs[f"P{player.player_id}"]["state"])
+            action = state_action_pairs[f"P{player.player_id}"]["action"]
+            reward = rewards[player.player_id]
+            next_state = copy.deepcopy(state)
+            done = True
+            player.remember(state_, action, reward, next_state, done)
         
-writer.flush()
+        starting_player_id = (starting_player_id + 1) % 4
+            
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description='Train Jass agent')
+    # Add arguments
+    #parser.add_argument('--model', type=str, default='dqn', help='Model to train')
+    
+    args = parser.parse_args()
+    
+    train_agent(args)

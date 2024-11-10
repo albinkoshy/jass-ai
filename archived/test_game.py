@@ -1,8 +1,8 @@
 import copy
 import numpy as np
-from agents.random_agent import Random_Agent
-from agents.dqn_agent import DQN_Agent
-from envs._env import JassEnv
+from archived.old_random_agent import Random_Agent
+from agents.old_dqn_agent import DQN_Agent
+from archived._env import JassEnv
 
 
 def play_game():

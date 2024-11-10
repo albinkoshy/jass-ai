@@ -1,9 +1,8 @@
 import copy
-import random
 from agents.agent_interface import IAgent
 
 
-class Random_Agent(IAgent):
+class Greedy_Agent(IAgent):
 
     def __init__(self, player_id, team_id):
         super().__init__()
@@ -19,15 +18,22 @@ class Random_Agent(IAgent):
         self._interpret_state(state)
 
         if self.is_starting_trick:
-            card = random.choice(self.hand)
+            # Play lowest card
+            card = self._get_lowest_card()
             self.hand.remove(card)
             card_idx = card.index
             return card_idx
 
-        # Choose randomly from valid options
         valid_hand = self._get_valid_hand()
-
-        card = random.choice(valid_hand)
+        # If one card can take the trick, play this card
+        for card in sorted(valid_hand, key=lambda c: c.rank.value, reverse=True):
+            if state["trick"].can_take_trick(card):
+                self.hand.remove(card)
+                card_idx = card.index
+                return card_idx
+        
+        # Otherwise play lowest valid card
+        card = self._get_lowest_card()
         self.hand.remove(card)
         card_idx = card.index
         return card_idx
@@ -65,3 +71,7 @@ class Random_Agent(IAgent):
     def _get_valid_hand(self) -> list:
         valid_hand = [card for card in self.hand if card.get_suit() == self.playing_suit]
         return valid_hand if valid_hand else self.hand
+
+    def _get_lowest_card(self):
+        lowest_card = min(self.hand, key=lambda c: c.rank.value)
+        return lowest_card

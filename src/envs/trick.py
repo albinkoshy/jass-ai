@@ -20,14 +20,23 @@ class Trick:
     def can_take_trick(self, card: Card) -> bool:
         if self.playing_suit != card.get_suit():
             return False
-        highest_card = self.get_highest_card()
+        highest_card = self._get_highest_card()
         return card.get_rank().value > highest_card.get_rank().value
 
-    def get_highest_card(self) -> Card:
+    def _get_highest_card(self) -> Card:
         same_suit_cards = [card for card in list(self.trick.values()) if card and card.get_suit() == self.playing_suit]
         return max(same_suit_cards, key=lambda c: c.rank.value)
 
-    def determine_trick_winner(self):
+    def determine_trick_winner(self) -> str:
+        """
+        Determine the winner of the trick
+
+        Raises:
+            Exception: Not all cards have been laid!
+
+        Returns:
+            str: Player who won the trick. Either "P0", "P1", "P2" or "P3"
+        """
         # Check if all cards have been laid
         if all(value is not None for value in self.trick.values()):
             # TODO: Differentiate between playing variant (trump_suit, bottom_up, top_down)
