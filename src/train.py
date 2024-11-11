@@ -44,7 +44,6 @@ def train_agent(args):
     env = JassEnv(players=players, print_globals=PRINT_ENV)
     starting_player_id = 0
     
-    
     writer = SummaryWriter(os.path.join(args.log_dir, "tensorboard"))
     
     print("Training agent...")
@@ -74,7 +73,7 @@ def train_agent(args):
             if state_action_pairs[f"P{current_turn}"]["state"] is not None:
                 state_ = copy.deepcopy(state_action_pairs[f"P{current_turn}"]["state"]) # The state before the current player played
                 action = state_action_pairs[f"P{current_turn}"]["action"] # The action the current player played before
-                reward = 0 # Reward for the current player (Reward is only given at the end of the trick)
+                reward = rewards[current_turn] # Reward for the current player
                 next_state = copy.deepcopy(state) # The state after the current player played
                 done = False # Done is only True at the end of the game
                 players[current_turn].remember(state_, action, reward, next_state, done)
@@ -85,7 +84,7 @@ def train_agent(args):
             state_action_pairs[f"P{current_turn}"]["action"] = action
             
             new_state, rewards, done = env.step(action) # The environment changes the state
-            
+            #print(f"Immediate rewards: {rewards}. Total rewards: {env.rewards}")
             current_turn = env.get_current_turn()
 
             state = copy.deepcopy(new_state)
@@ -105,6 +104,8 @@ def train_agent(args):
             
             if episode % (N_EPISODES // 10000) == 0:
                 if loss is not None:
+                    writer.add_scalar(f"Reward/P{player.player_id}", env.rewards[player.player_id], episode) # Total reward for the player at the end of the game
+                    #print(f"Episode: {episode}, Player: {player.player_id}, Reward: {env.rewards[player.player_id]}")
                     writer.add_scalar(f"Loss/P{player.player_id}", loss, episode)
                     writer.add_scalar(f"Epsilon/P{player.player_id}", player.epsilon, episode)
         
@@ -113,7 +114,7 @@ def train_agent(args):
             for player in players:
                 # Save to log_dir
                 directory = os.path.join(args.log_dir, f"models/P{player.player_id}_{player.__class__.__name__}")
-                player.save_model(name=f"dqn_agent_{episode}_{player.player_id}", directory=directory)
+                player.save_model(name=f"dqn_agent_{episode}.pt", directory=directory)
                 
         starting_player_id = (starting_player_id + 1) % 4
             

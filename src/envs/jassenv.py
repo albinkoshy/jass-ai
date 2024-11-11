@@ -47,6 +47,7 @@ class JassEnv:
         self.n_tricks = 0
         
         self.rewards = [0, 0, 0, 0] # To keep track of rewards (points won in tricks) for each player
+        self.reward_won_last_trick = [0, 0, 0, 0] # To keep track of the reward won in the last trick
         return self._get_state()
     
     def get_current_turn(self):
@@ -118,7 +119,7 @@ class JassEnv:
                     print(f"P{trick_winner_id} won {self.n_tricks}.trick")
                     print(f"Final points distribution: {self.rewards}")
                 
-                return self._get_state(), self.reward_won_last_trick, done
+                return self._get_state(), [r / 44 for r in self.reward_won_last_trick], done
             
             # Start a new trick
             self.trick = Trick(leading_player_id=self.leading_player_id)
@@ -127,10 +128,10 @@ class JassEnv:
                 self._print_hands()
                 print(f"P{self.leading_player_id} is leading the round")
             
-            return self._get_state(), self.reward_won_last_trick, False
+            return self._get_state(), [r / 44 for r in self.reward_won_last_trick], False
         else:
             # Continue playing the trick            
-            return self._get_state(), self.reward_won_last_trick, False
+            return self._get_state(), [r / 44 for r in self.reward_won_last_trick], False
 
     def _update_env_after_play(self, action: int, player_id: int):
         # Remove card from player's hand

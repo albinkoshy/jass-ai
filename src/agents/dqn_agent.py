@@ -105,17 +105,17 @@ class DQN_Agent(IAgent):
         
         # Get samples from memory
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size, split_transitions=True)
-        states_masks, next_states_masks = self._get_masks_for_optimization(states, next_states, dones) # Masks: True for invalid actions, False for valid actions
+        #states_masks, next_states_masks = self._get_masks_for_optimization(states, next_states, dones) # Masks: True for invalid actions, False for valid actions
         
         states, actions, rewards, next_states, dones = self._preprocess_batch(states, actions, rewards, next_states, dones)
         
         with torch.no_grad():
             next_q_values = self.target_net(next_states)
-            next_q_values = torch.where(next_states_masks, -1e7, next_q_values).max(dim=1, keepdim=True)[0]  # Get max Q-Values for the next_states.
+            #next_q_values = torch.where(next_states_masks, -1e7, next_q_values).max(dim=1, keepdim=True)[0]  # Get max Q-Values for the next_states.
             expected_q_values = rewards + (1 - dones) * self.gamma * next_q_values
 
         q_values = self.network(states)
-        q_values = torch.where(states_masks, -1e7, q_values)
+        #q_values = torch.where(states_masks, -1e7, q_values)
         q_values = q_values.gather(dim=1, index=actions)  # Get Q-Values for the actions
 
         loss = self.criterion(q_values, expected_q_values)
@@ -145,7 +145,10 @@ class DQN_Agent(IAgent):
         self.target_net.load_state_dict(self.network.state_dict())
 
     def load_model(self, loadpath: str):
-        pass
+        self.network.load_state_dict(torch.load(loadpath, map_location=self.device))
+        self.network.eval()
+        self.target_net.load_state_dict(torch.load(loadpath, map_location=self.device))
+        self.target_net.eval()
 
     def save_model(self, name: str, directory: str):
         if not os.path.isdir(directory):
