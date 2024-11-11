@@ -112,6 +112,7 @@ class DQN_Agent(IAgent):
         with torch.no_grad():
             next_q_values = self.target_net(next_states)
             #next_q_values = torch.where(next_states_masks, -1e7, next_q_values).max(dim=1, keepdim=True)[0]  # Get max Q-Values for the next_states.
+            next_q_values = next_q_values.max(dim=1, keepdim=True)[0]
             expected_q_values = rewards + (1 - dones) * self.gamma * next_q_values
 
         q_values = self.network(states)
