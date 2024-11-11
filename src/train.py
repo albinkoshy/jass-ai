@@ -33,7 +33,15 @@ def train_agent(args):
     epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
     
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    dqn_agent = DQN_Agent(player_id=0, team_id=0, epsilon_decay=epsilon_decay, gamma=1.0, tau=args.tau, lr=args.lr, device=device)
+    dqn_agent = DQN_Agent(player_id=0, 
+                          team_id=0, 
+                          hidden_size=args.hidden_size, 
+                          hidden_layers=args.hidden_layers, 
+                          epsilon_decay=epsilon_decay, 
+                          gamma=args.gamma, 
+                          tau=args.tau, 
+                          lr=args.lr, 
+                          device=device)
     
     players = [dqn_agent,
                Greedy_Agent(player_id=1, team_id=1),
@@ -124,6 +132,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train agent')
     # Add arguments
     parser.add_argument('--n_episodes', type=int, default=10000, help='Number of episodes to train the agent')
+    parser.add_argument('--hidden_size', type=int, default=256, help='Hidden size of the neural network')
+    parser.add_argument('--hidden_layers', type=int, default=3, help='Number of hidden layers of the neural network')
+    parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor for the reward')
     parser.add_argument('--tau', type=float, default=0.001, help='Soft update parameter for target network')
     parser.add_argument('--lr', type=float, default=0.0005, help='Learning rate for the adam optimizer')
     parser.add_argument('--log_dir', type=str, default='./logs', help='Directory to save the logs')
