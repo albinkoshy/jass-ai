@@ -19,8 +19,7 @@ class DQN_Agent(IAgent):
         player_id,
         team_id,
         deterministic: bool = False,
-        hidden_size: int = 256,
-        hidden_layers: int = 3,
+        hidden_sizes: list[int] = [256, 256, 256],
         batch_size: int = 256,
         epsilon_max: float = 1.0,
         epsilon_min: float = 0.01,
@@ -41,8 +40,7 @@ class DQN_Agent(IAgent):
 
         self.state_size = 292
         self.action_size = 36
-        self.hidden_size = hidden_size
-        self.hidden_layers = hidden_layers
+        self.hidden_sizes = hidden_sizes
         self.batch_size = batch_size
 
         # Exploration rate (epsilon-greedy)
@@ -63,11 +61,12 @@ class DQN_Agent(IAgent):
 
         self.num_optimizations = 0
 
-        self.network = Q_Net(self.state_size, self.action_size, self.hidden_size, self.hidden_layers).eval().to(self.device)
-        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_size, self.hidden_layers).eval().to(self.device)
+        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
+        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
         self.target_net.load_state_dict(self.network.state_dict())
 
-        self.criterion = nn.MSELoss(reduction='sum')
+        #self.criterion = nn.MSELoss(reduction='sum')
+        self.criterion = nn.SmoothL1Loss(reduction='sum', beta=0.01)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.lr)
 
     def act(self, state):
@@ -101,7 +100,7 @@ class DQN_Agent(IAgent):
             return None
         
         self.network.train()
-        self.target_net.train()
+        self.target_net.eval()
         
         # Get samples from memory
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size, split_transitions=True)
@@ -120,9 +119,9 @@ class DQN_Agent(IAgent):
         q_values = q_values.gather(dim=1, index=actions)  # Get Q-Values for the actions
 
         loss = self.criterion(q_values, expected_q_values)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        self.optimizer.zero_grad() # Set all gradients (.grad) to zero to avoid accumulation
+        loss.backward() # Compute gradients of the loss w.r.t. the parameters (stored in .grad)
+        self.optimizer.step() # Perform gradient descent by adjusting the weights by its gradients stored in .grad
 
         # Update target network
         soft_update(self.network, self.target_net, self.tau)
@@ -141,8 +140,8 @@ class DQN_Agent(IAgent):
         self.playing_suit = None
         self.memory.reset()
         self.num_optimizations = 0
-        self.network = Q_Net(self.state_size, self.action_size, self.hidden_size, self.hidden_layers).eval().to(self.device)
-        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_size, self.hidden_layers).eval().to(self.device)
+        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
+        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
         self.target_net.load_state_dict(self.network.state_dict())
 
     def load_model(self, loadpath: str):

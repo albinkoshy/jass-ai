@@ -36,6 +36,7 @@ def evaluate_agent(args):
     env = JassEnv(players=players, print_globals=PRINT_ENV)
     starting_player_id = 0
     rewards_list = []
+    won_games = [0, 0, 0, 0]
     
     print("Evaluating agent...")
     
@@ -54,10 +55,14 @@ def evaluate_agent(args):
         starting_player_id = (starting_player_id + 1) % 4
         
         rewards_list.append(env.rewards)
+        
+        winner = np.argmax(env.rewards)
+        won_games[winner] += 1
 
     print()
     print(f"Number of episodes: {len(rewards_list)}")
     print(f"Average points: {np.average(rewards_list, axis=0)}")
+    print(f"Number of won games: {won_games}")
 
 if __name__ == "__main__":
     

@@ -86,20 +86,22 @@ class Q_Net(nn.Module):
     Fully connected neural network. This class implements a neural network with a variable number of hidden layers and hidden units.
     """
 
-    def __init__(self, state_size, action_size, layer_size, hidden_layers):
+    def __init__(self, state_size, action_size, layer_sizes):
         super().__init__()
 
         self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(state_size, layer_size))  # Input layer
-        for _ in range(hidden_layers):
-            self.layers.append(nn.Linear(layer_size, layer_size))  # Hidden layers
-        self.output_layer = nn.Linear(layer_size, action_size)  # Output layer
+        self.layers.append(nn.Linear(state_size, layer_sizes[0]))  # Input layer
+        for i in range(len(layer_sizes) - 1):
+            self.layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))  # Hidden layers
+        self.output_layer = nn.Linear(layer_sizes[-1], action_size)  # Output layer
 
         self.activation = nn.functional.relu
+        self.output_activation = nn.functional.sigmoid
         self.apply(weights_init_)
 
     def forward(self, s: torch.Tensor):
 
         for layer in self.layers:
             s = self.activation(layer(s))
-        return self.output_layer(s)
+        out = self.output_activation(self.output_layer(s))
+        return out

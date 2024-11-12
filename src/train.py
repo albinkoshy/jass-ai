@@ -35,8 +35,7 @@ def train_agent(args):
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
     dqn_agent = DQN_Agent(player_id=0, 
                           team_id=0, 
-                          hidden_size=args.hidden_size, 
-                          hidden_layers=args.hidden_layers, 
+                          hidden_sizes=args.hidden_sizes,
                           epsilon_decay=epsilon_decay, 
                           gamma=args.gamma, 
                           tau=args.tau, 
@@ -57,6 +56,9 @@ def train_agent(args):
     print("Training agent...")
     # Summary of used hyperparameters
     print("Hyperparameters:")
+    print(f"    Number of episodes: {N_EPISODES}")
+    print(f"    Hidden sizes: {args.hidden_sizes}")
+    print(f"    Gamma: {args.gamma}")
     print(f"    Tau: {args.tau}")
     print(f"    Learning rate: {args.lr}")
     print(f"    Log directory: {args.log_dir}")
@@ -130,14 +132,37 @@ def train_agent(args):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Train agent')
-    # Add arguments
-    parser.add_argument('--n_episodes', type=int, default=10000, help='Number of episodes to train the agent')
-    parser.add_argument('--hidden_size', type=int, default=256, help='Hidden size of the neural network')
-    parser.add_argument('--hidden_layers', type=int, default=3, help='Number of hidden layers of the neural network')
-    parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor for the reward')
-    parser.add_argument('--tau', type=float, default=0.001, help='Soft update parameter for target network')
-    parser.add_argument('--lr', type=float, default=0.0005, help='Learning rate for the adam optimizer')
-    parser.add_argument('--log_dir', type=str, default='./logs', help='Directory to save the logs')
-    args = parser.parse_args()
     
+    # Add arguments
+    parser.add_argument('--n_episodes', 
+                        type=int, 
+                        default=10000, 
+                        help='number of episodes to train the agent')
+    
+    parser.add_argument('--hidden_sizes', 
+                        type=lambda s: [int(item) for item in s.split(',')], 
+                        default="256,256,256", 
+                        help='hidden sizes of the neural network, input comma separated without spaces (e.g. "256,256,256")')
+    
+    parser.add_argument('--gamma',
+                        type=float,
+                        default=0.99,
+                        help='discount factor for the reward')
+    
+    parser.add_argument('--tau',
+                        type=float,
+                        default=0.001,
+                        help='soft update parameter for target network')
+    
+    parser.add_argument('--lr',
+                        type=float,
+                        default=0.0005,
+                        help='learning rate for the adam optimizer')
+    
+    parser.add_argument('--log_dir', 
+                        type=str, 
+                        default='./logs', 
+                        help='directory to save the logs')
+    
+    args = parser.parse_args()
     train_agent(args)
