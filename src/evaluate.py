@@ -24,7 +24,10 @@ def evaluate_agent(args):
     N_EPISODES = args.n_episodes
     
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    dqn_agent = DQN_Agent(player_id=0, team_id=0, deterministic=True, device=device)  # Deterministic evaluation
+    dqn_agent = DQN_Agent(player_id=0, team_id=0,
+                          hidden_sizes=args.hidden_sizes,
+                          deterministic=True,
+                          device=device)  # Deterministic evaluation
     dqn_agent.load_model(args.model_path)
     
     players = [dqn_agent,
@@ -68,8 +71,21 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Evaluate agent')
     # Add arguments
-    parser.add_argument('--model_path', type=str, required=True, help='Path to the model to evaluate')
-    parser.add_argument('--n_episodes', type=int, default=1000, help='Number of episodes to evaluate the agent')
+    parser.add_argument('--model_path', 
+                        type=str, 
+                        required=True, 
+                        help='path to the model to evaluate')
+    
+    parser.add_argument('--n_episodes', 
+                        type=int, 
+                        default=1000, 
+                        help='number of episodes to evaluate the agent')
+    
+    parser.add_argument('--hidden_sizes', 
+                        type=lambda s: [int(item) for item in s.split(',')], 
+                        default="256,256,256", 
+                        help='hidden sizes of the neural network, input comma separated without spaces (e.g. "256,256,256")')
+    
     args = parser.parse_args()
     
     evaluate_agent(args)

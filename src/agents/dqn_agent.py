@@ -20,7 +20,7 @@ class DQN_Agent(IAgent):
         team_id,
         deterministic: bool = False,
         hidden_sizes: list[int] = [256, 256, 256],
-        batch_size: int = 256,
+        batch_size: int = 512,
         epsilon_max: float = 1.0,
         epsilon_min: float = 0.01,
         epsilon_decay: float = 0.99999,
@@ -104,18 +104,18 @@ class DQN_Agent(IAgent):
         
         # Get samples from memory
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size, split_transitions=True)
-        #states_masks, next_states_masks = self._get_masks_for_optimization(states, next_states, dones) # Masks: True for invalid actions, False for valid actions
-        
+        states_masks, next_states_masks = self._get_masks_for_optimization(states, next_states, dones) # Masks: True for invalid actions, False for valid actions
+
         states, actions, rewards, next_states, dones = self._preprocess_batch(states, actions, rewards, next_states, dones)
         
         with torch.no_grad():
             next_q_values = self.target_net(next_states)
-            #next_q_values = torch.where(next_states_masks, -1e7, next_q_values).max(dim=1, keepdim=True)[0]  # Get max Q-Values for the next_states.
-            next_q_values = next_q_values.max(dim=1, keepdim=True)[0]
+            next_q_values = torch.where(next_states_masks, -1e7, next_q_values)
+            next_q_values = next_q_values.max(dim=1, keepdim=True)[0] # Get max Q-Values for the next_states.
             expected_q_values = rewards + (1 - dones) * self.gamma * next_q_values
 
         q_values = self.network(states)
-        #q_values = torch.where(states_masks, -1e7, q_values)
+        q_values = torch.where(states_masks, -1e7, q_values)
         q_values = q_values.gather(dim=1, index=actions)  # Get Q-Values for the actions
 
         loss = self.criterion(q_values, expected_q_values)

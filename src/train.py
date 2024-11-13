@@ -27,8 +27,10 @@ def train_agent(args):
     #   P0
     
     N_EPISODES = args.n_episodes
+    LOG_EVERY = 100 if N_EPISODES > 1000 else 10
+    SAVE_MODEL_EVERY = 20000 if N_EPISODES > 100000 else 2000
     
-    percentage_above_epsilon_min: float = 0.8
+    percentage_above_epsilon_min: float = 0.5
     epsilon_min: float = 0.01
     epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
     
@@ -51,6 +53,7 @@ def train_agent(args):
     env = JassEnv(players=players, print_globals=PRINT_ENV)
     starting_player_id = 0
     
+    rewards_list = [deque([], maxlen=1000), deque([], maxlen=1000), deque([], maxlen=1000), deque([], maxlen=1000)]
     writer = SummaryWriter(os.path.join(args.log_dir, "tensorboard"))
     
     print("Training agent...")
@@ -64,7 +67,7 @@ def train_agent(args):
     print(f"    Log directory: {args.log_dir}")
     
     # Training loop
-    for episode in tqdm(range(N_EPISODES), desc="Training Episodes"):
+    for episode in tqdm(range(1, N_EPISODES+1), desc="Training Episodes"):
         
         state = env.reset(starting_player_id=starting_player_id)
         current_turn = env.get_current_turn()
@@ -111,15 +114,17 @@ def train_agent(args):
         # Train the agent after each episode
         for player in players:
             loss = player.optimize_model()
+            # Keep track of rewards for each player after each episode
+            rewards_list[player.player_id].append(env.rewards[player.player_id]/157)
             
-            if episode % (N_EPISODES // 10000) == 0:
+            if episode % LOG_EVERY == 0:
                 if loss is not None:
-                    writer.add_scalar(f"Reward/P{player.player_id}", env.rewards[player.player_id], episode) # Total reward for the player at the end of the game
-                    #print(f"Episode: {episode}, Player: {player.player_id}, Reward: {env.rewards[player.player_id]}")
+                    avg_reward = sum(rewards_list[player.player_id])/len(rewards_list[player.player_id])
+                    writer.add_scalar(f"AVG_Reward/P{player.player_id}", avg_reward, episode)
                     writer.add_scalar(f"Loss/P{player.player_id}", loss, episode)
                     writer.add_scalar(f"Epsilon/P{player.player_id}", player.epsilon, episode)
         
-        if episode % (N_EPISODES // 10) == 0:
+        if episode % SAVE_MODEL_EVERY == 0:
             # Save the model
             for player in players:
                 # Save to log_dir
@@ -151,12 +156,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--tau',
                         type=float,
-                        default=0.001,
+                        default=0.00005,
                         help='soft update parameter for target network')
     
     parser.add_argument('--lr',
                         type=float,
-                        default=0.0005,
+                        default=0.00005,
                         help='learning rate for the adam optimizer')
     
     parser.add_argument('--log_dir', 

@@ -4,8 +4,8 @@ from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
 from envs.jassenv import JassEnv
 
-N_EPISODES = 1000
-PRINT_ENV = False
+N_EPISODES = 1
+PRINT_ENV = True
 
 """ Test JassEnv and different agents """
     
@@ -72,7 +72,7 @@ for episode in range(N_EPISODES):
         
     starting_player_id = (starting_player_id + 1) % 4
     
-    rewards_list.append(rewards)
+    rewards_list.append(env.rewards)
 
 import numpy as np
 print()
