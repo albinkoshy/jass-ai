@@ -37,8 +37,10 @@ def evaluate_agent(args):
     # Initialize the environment
     env = JassEnv(players=players, print_globals=PRINT_ENV)
     starting_player_id = 0
-    rewards_list = []
-    won_games = [0, 0, 0, 0]
+    rewards_list_per_player = []
+    rewards_list_per_team = []
+    won_games_per_player = [0, 0, 0, 0]
+    won_games_per_team = [0, 0]
     
     print(f"Evaluating agent {args.model_path}...")
     
@@ -56,15 +58,20 @@ def evaluate_agent(args):
         
         starting_player_id = (starting_player_id + 1) % 4
         
-        rewards_list.append(env.rewards)
+        rewards_list_per_player.append(env.rewards_per_player)
+        rewards_list_per_team.append(env.rewards_per_team)
         
-        winner = np.argmax(env.rewards)
-        won_games[winner] += 1
+        winner_player = np.argmax(env.rewards_per_player)
+        won_games_per_player[winner_player] += 1
+        
+        winner_team = np.argmax(env.rewards_per_team)
+        won_games_per_team[winner_team] += 1
 
     print()
-    print(f"Number of episodes: {len(rewards_list)}")
-    print(f"Average points: {np.average(rewards_list, axis=0)}")
-    print(f"Number of won games: {won_games}")
+    print(f"Number of episodes: {len(rewards_list_per_player)}")
+    print(f"Average points per player: {np.average(rewards_list_per_player, axis=0)}")
+    print(f"Average points per team: {np.average(rewards_list_per_team, axis=0)}")
+    print(f"Number of won games: {won_games_per_team}")
 
 if __name__ == "__main__":
     

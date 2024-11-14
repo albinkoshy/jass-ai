@@ -4,7 +4,7 @@ from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
 from envs.jassenv import JassEnv
 
-N_EPISODES = 1
+N_EPISODES = 1000
 PRINT_ENV = True
 
 """ Test JassEnv and different agents """
@@ -24,7 +24,8 @@ players = [Random_Agent(player_id=0, team_id=0),
 env = JassEnv(players=players, print_globals=PRINT_ENV)
 starting_player_id = 0
 
-rewards_list = []
+rewards_list_per_player = []
+reward_list_per_team = []
 
 for episode in range(N_EPISODES):
 
@@ -45,7 +46,7 @@ for episode in range(N_EPISODES):
         if state_action_pairs[f"P{current_turn}"]["state"] is not None:
             state_ = copy.deepcopy(state_action_pairs[f"P{current_turn}"]["state"]) # The state before the current player played
             action = state_action_pairs[f"P{current_turn}"]["action"] # The action the current player played before
-            reward = 0 # Reward for the current player (Reward is only given at the end of the trick)
+            reward = 0 # Reward for the current player
             next_state = copy.deepcopy(state) # The state after the current player played
             done = False # Done is only True at the end of the game
             players[current_turn].remember(state_, action, reward, next_state, done)
@@ -72,9 +73,11 @@ for episode in range(N_EPISODES):
         
     starting_player_id = (starting_player_id + 1) % 4
     
-    rewards_list.append(env.rewards)
+    rewards_list_per_player.append(env.rewards_per_player)
+    reward_list_per_team.append(env.rewards_per_team)
 
 import numpy as np
 print()
-print(f"Number of episodes: {len(rewards_list)}")
-print(f"Average points: {np.average(rewards_list, axis=0)}")
+print(f"Number of episodes: {len(rewards_list_per_player)}")
+print(f"Average points per player: {np.average(rewards_list_per_player, axis=0)}")
+print(f"Average points per team: {np.average(reward_list_per_team, axis=0)}")

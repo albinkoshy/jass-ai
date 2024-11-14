@@ -17,9 +17,10 @@ class JassEnv:
         
         self.n_tricks = None
         
-        self.rewards = None
-        
-        self.reward_won_last_trick = None
+        self.rewards_per_player = None
+        self.rewards_per_team = None
+        self.reward_won_last_trick_per_player = None
+        self.reward_won_last_trick_per_team = None
 
     def reset(self, starting_player_id) -> dict:
         """
@@ -46,8 +47,10 @@ class JassEnv:
         
         self.n_tricks = 0
         
-        self.rewards = [0, 0, 0, 0] # To keep track of rewards (points won in tricks) for each player
-        self.reward_won_last_trick = [0, 0, 0, 0] # To keep track of the reward won in the last trick
+        self.rewards_per_player = [0, 0, 0, 0] # To keep track of rewards (points won in tricks) for each player
+        self.rewards_per_team = [0, 0] # To keep track of rewards (points won in tricks) for each team
+        self.reward_won_last_trick_per_player = [0, 0, 0, 0] # To keep track of the reward won in the last trick
+        self.reward_won_last_trick_per_team = [0, 0] # To keep track of the reward won in the last trick by each team
         return self._get_state()
     
     def get_current_turn(self):
@@ -94,13 +97,18 @@ class JassEnv:
             self.current_turn = trick_winner_id
             
             trick_points = self.trick.get_trick_points()
-            self.rewards[trick_winner_id] += trick_points
-            self.reward_won_last_trick = [0, 0, 0, 0]
-            self.reward_won_last_trick[trick_winner_id] = trick_points
+            self.rewards_per_player[trick_winner_id] += trick_points
+            self.rewards_per_team[trick_winner_id % 2] += trick_points
+            
+            self.reward_won_last_trick_per_player = [0, 0, 0, 0]
+            self.reward_won_last_trick_per_player[trick_winner_id] = trick_points
+            self.reward_won_last_trick_per_team = [0, 0]
+            self.reward_won_last_trick_per_team[trick_winner_id % 2] = trick_points
             
             if self.print_globals and self.n_tricks < 9:
                 print(f"P{trick_winner_id} won {self.n_tricks}.trick")
-                print(f"Points: {self.rewards}")
+                print(f"Points per player: {self.rewards_per_player}")
+                print(f"Points per team: {self.rewards_per_team}")
                 print()
             
             if self.n_tricks == 9:
@@ -109,17 +117,23 @@ class JassEnv:
                 done = True
                 
                 # Trick winner gets 5 additional points
-                self.rewards[trick_winner_id] += 5
-                assert sum(self.rewards) == 157, "Total points should be 157"
+                self.rewards_per_player[trick_winner_id] += 5
+                assert sum(self.rewards_per_player) == 157, "Total points should be 157"
+                self.rewards_per_team[trick_winner_id % 2] += 5
+                assert sum(self.rewards_per_team) == 157, "Total points should be 157"
+                
+                self.reward_won_last_trick_per_player[trick_winner_id] += 5
+                self.reward_won_last_trick_per_team[trick_winner_id % 2] += 5
 
                 self.trick = None
                 self.leading_player_id = None
                 
                 if self.print_globals:
                     print(f"P{trick_winner_id} won {self.n_tricks}.trick")
-                    print(f"Final points distribution: {self.rewards}")
+                    print(f"Final points distribution per player: {self.rewards_per_player}")
+                    print(f"Final points distribution per team: {self.rewards_per_team}")
                 
-                return self._get_state(), [r / 157 for r in self.reward_won_last_trick], done
+                return self._get_state(), [r / 157 for r in (2*self.reward_won_last_trick_per_team)], done # Note: 2*my_list concatenates the list with itself (so the player sees the reward or its team)
             
             # Start a new trick
             self.trick = Trick(leading_player_id=self.leading_player_id)
@@ -128,10 +142,10 @@ class JassEnv:
                 self._print_hands()
                 print(f"P{self.leading_player_id} is leading the round")
             
-            return self._get_state(), [r / 157 for r in self.reward_won_last_trick], False
+            return self._get_state(), [r / 157 for r in (2*self.reward_won_last_trick_per_team)], False
         else:
             # Continue playing the trick            
-            return self._get_state(), [r / 157 for r in self.reward_won_last_trick], False
+            return self._get_state(), [r / 157 for r in (2*self.reward_won_last_trick_per_team)], False
 
     def _update_env_after_play(self, action: int, player_id: int):
         # Remove card from player's hand

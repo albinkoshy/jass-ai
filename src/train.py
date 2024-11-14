@@ -30,7 +30,7 @@ def train_agent(args):
     LOG_EVERY = 100 if N_EPISODES > 1000 else 10
     SAVE_MODEL_EVERY = 20000 if N_EPISODES > 100000 else 2000
     
-    percentage_above_epsilon_min: float = 0.5
+    percentage_above_epsilon_min: float = 0.6
     epsilon_min: float = 0.01
     epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
     
@@ -97,7 +97,7 @@ def train_agent(args):
             state_action_pairs[f"P{current_turn}"]["action"] = action
             
             new_state, rewards, done = env.step(action) # The environment changes the state
-            #print(f"Immediate rewards: {rewards}. Total rewards: {env.rewards}")
+            
             current_turn = env.get_current_turn()
 
             state = copy.deepcopy(new_state)
@@ -115,7 +115,8 @@ def train_agent(args):
         for player in players:
             loss = player.optimize_model()
             # Keep track of rewards for each player after each episode
-            rewards_list[player.player_id].append(env.rewards[player.player_id]/157)
+            # rewards_list[player.player_id].append(env.rewards_per_player[player.player_id]/157) # Per player
+            rewards_list[player.player_id].append(env.rewards_per_team[player.player_id % 2]/157) # Per team
             
             if episode % LOG_EVERY == 0:
                 if loss is not None:
