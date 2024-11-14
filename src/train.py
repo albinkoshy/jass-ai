@@ -129,7 +129,7 @@ def train_agent(args):
             for player in players:
                 # Save to log_dir
                 directory = os.path.join(args.log_dir, f"models/P{player.player_id}_{player.__class__.__name__}")
-                player.save_model(name=f"dqn_agent_{episode}.pt", directory=directory)
+                player.save_model(name=f"dqn_agent_{args.hidden_sizes.replace(",", "-")}_{episode}.pt", directory=directory)
                 
         starting_player_id = (starting_player_id + 1) % 4
             

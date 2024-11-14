@@ -2,11 +2,10 @@ import copy
 import os
 import random
 import argparse
-from collections import deque
 import torch
 import numpy as np
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
+
 from agents.random_agent import Random_Agent
 from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
@@ -41,7 +40,7 @@ def evaluate_agent(args):
     rewards_list = []
     won_games = [0, 0, 0, 0]
     
-    print("Evaluating agent...")
+    print(f"Evaluating agent {args.model_path}...")
     
     for episode in tqdm(range(N_EPISODES), desc="Evaluation of agent"):
         
@@ -83,7 +82,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--hidden_sizes', 
                         type=lambda s: [int(item) for item in s.split(',')], 
-                        default="256,256,256", 
+                        required=True,
                         help='hidden sizes of the neural network, input comma separated without spaces (e.g. "256,256,256")')
     
     args = parser.parse_args()

@@ -20,8 +20,9 @@ for hidden_sizes in "${HIDDEN_SIZES[@]}"; do
                     break 4
                 fi
 
-                log_dir="./logs/run_${N_EPISODES}_${hidden_sizes}_${gamma}_${tau}_${lr}"
-                output_file="./output_logs/run_${N_EPISODES}_${hidden_sizes}_${gamma}_${tau}_${lr}.out"
+                hidden_sizes_hyphen=$(echo "${hidden_sizes}" | tr ',' '-')
+                log_dir="./logs/run_${N_EPISODES}_${hidden_sizes_hyphen}_${gamma}_${tau}_${lr}"
+                output_file="./output_logs/run_${N_EPISODES}_${hidden_sizes_hyphen}_${gamma}_${tau}_${lr}.out"
 
                 sbatch -n 1 --mem-per-cpu=4096 --time=11:00:00 --output="${output_file}" --wrap="python src/train.py \
                 --n_episodes=${N_EPISODES} \

@@ -145,9 +145,9 @@ class DQN_Agent(IAgent):
         self.target_net.load_state_dict(self.network.state_dict())
 
     def load_model(self, loadpath: str):
-        self.network.load_state_dict(torch.load(loadpath, map_location=self.device))
+        self.network.load_state_dict(torch.load(loadpath, map_location=self.device, weights_only=True))
         self.network.eval()
-        self.target_net.load_state_dict(torch.load(loadpath, map_location=self.device))
+        self.target_net.load_state_dict(torch.load(loadpath, map_location=self.device, weights_only=True))
         self.target_net.eval()
 
     def save_model(self, name: str, directory: str):
