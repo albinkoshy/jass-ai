@@ -15,6 +15,8 @@ GLOBAL_DECK = Deck()
 GLOBAL_DECK.order_deck()
 ORDERED_CARDS = np.array(GLOBAL_DECK.cards)
 
+GAME_TYPES = ["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE", "SCHIEBEN"]
+
 
 def seed_everything(seed: int = 42, deterministic: bool = True):
     random.seed(seed)

@@ -1,6 +1,7 @@
 import copy
 import random
 from agents.agent_interface import IAgent
+from envs.card import Suit
 
 
 class Random_Agent(IAgent):
@@ -13,6 +14,7 @@ class Random_Agent(IAgent):
         self.hand = None
         self.is_starting_trick = None
         self.playing_suit = None
+        self.game_type = None
 
     def act(self, state) -> int:
         state = copy.deepcopy(state)
@@ -42,6 +44,7 @@ class Random_Agent(IAgent):
         self.hand = None
         self.is_starting_trick = None
         self.playing_suit = None
+        self.game_type = None
 
     def load_model(self, loadpath: str):
         pass
@@ -53,7 +56,7 @@ class Random_Agent(IAgent):
         
         self.hand = state["hands"][f"P{self.player_id}"]
         leading_player_id = state["leading_player_id"]
-        # play_style = state[2]
+        self.game_type = state["game_type"]
         
         if leading_player_id == self.player_id:
             self.is_starting_trick = True
@@ -63,5 +66,22 @@ class Random_Agent(IAgent):
             self.playing_suit = state["trick"].playing_suit
 
     def _get_valid_hand(self) -> list:
-        valid_hand = [card for card in self.hand if card.get_suit() == self.playing_suit]
+        if self.game_type in ["ROSE", "SCHILTE", "EICHEL", "SCHELLE"]:
+            trump_suit = getattr(Suit, self.game_type)
+        else:
+            trump_suit = None
+        valid_hand = [card for card in self.hand if card.suit == self.playing_suit or card.suit == trump_suit]
+ 
+        if trump_suit and self.playing_suit != trump_suit and all(card.suit == trump_suit for card in valid_hand):
+            return self.hand
         return valid_hand if valid_hand else self.hand
+
+    def choose_game_type(self, state, is_geschoben: str = False) -> str:
+        # Choose game type randomly
+        if is_geschoben:
+            game_type = random.choice(["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE"])
+            return game_type
+        
+        game_type = random.choice(["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE", "SCHIEBEN"])
+        return game_type
+    

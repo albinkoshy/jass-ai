@@ -5,6 +5,10 @@ HIDDEN_SIZES=("128,128" "256,256" "256,128,64")
 GAMMA=(0.99 1)
 TAU_VALUES=(0.005)
 LR_VALUES=(0.00005)
+# Loss function
+# activation function
+# Replay buffer size
+# Batch size
 
 # Ensure directories exist
 mkdir -p ./logs ./output_logs

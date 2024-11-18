@@ -42,7 +42,7 @@ class Greedy_Player(IPlayer):
         Returns:
             list: list of valid Cards to play
         """
-        valid_hand = [card for card in self.hand if card.get_suit() == playing_suit]
+        valid_hand = [card for card in self.hand if card.suit == playing_suit]
         return valid_hand if valid_hand else self.hand
 
     def play_lowest_card(self, hand: list[Card]) -> Card:

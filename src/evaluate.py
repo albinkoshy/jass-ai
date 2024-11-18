@@ -47,6 +47,14 @@ def evaluate_agent(args):
     for episode in tqdm(range(N_EPISODES), desc="Evaluation of agent"):
         
         state = env.reset(starting_player_id=starting_player_id)
+        
+        game_type = players[starting_player_id].choose_game_type(state=state)
+        if game_type ==  "SCHIEBEN":
+            team_mate_id = (starting_player_id + 2) % 4
+            game_type = players[team_mate_id].choose_game_type(state=state, is_geschoben=True)
+        
+        env.set_game_type(game_type)
+        
         current_turn = env.get_current_turn()
         done = False
         

@@ -96,7 +96,7 @@ class JassEnv(gym.Env):
         if self.leading_player_id == 0:
             assert self.current_turn == 0
             self.trick.set_suit(card=agent_card)
-            print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
+            print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.playing_suit)}")
         print(f"P{self.current_turn} played {agent_card}")
         self.current_turn += 1
 
@@ -221,7 +221,7 @@ class JassEnv(gym.Env):
             self.trick.trick[f"P{self.current_turn}"] = card
             if i == 0:
                 self.trick.set_suit(card=card)
-                print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.get_suit())}")
+                print(f"Lead Player is: P{self.leading_player_id}. Playing suit is {repr(self.trick.playing_suit)}")
             print(f"P{current_player.player_id} played {card}")
 
             self._update_state_after_play(action=card.index, player_id=self.current_turn)

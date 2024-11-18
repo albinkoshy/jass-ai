@@ -168,7 +168,7 @@ class DQN_Agent(IAgent):
             assert len(leading_card_idx) == 1
             leading_card_idx = leading_card_idx[0]
             self.is_starting_trick = False
-            self.playing_suit = utils.ORDERED_CARDS[leading_card_idx].get_suit()
+            self.playing_suit = utils.ORDERED_CARDS[leading_card_idx].suit
 
     def _get_valid_hand_card_indices(self, hand_card_indices, playing_suit) -> list:
         if playing_suit == Suit.ROSE:  # (0, 8)
@@ -226,7 +226,7 @@ class DQN_Agent(IAgent):
                 leading_card_idx = np.where(card_distribution[1, leading_player_id, :] == 1)[0].tolist()
                 assert len(leading_card_idx) == 1
                 leading_card_idx = leading_card_idx[0]
-                playing_suit = utils.ORDERED_CARDS[leading_card_idx].get_suit()
+                playing_suit = utils.ORDERED_CARDS[leading_card_idx].suit
             
                 valid_hand_card_indices = self._get_valid_hand_card_indices(hand_card_indices, playing_suit)
                 mask = np.ones((self.action_size,), dtype=int)
@@ -255,7 +255,7 @@ class DQN_Agent(IAgent):
                 leading_card_idx = np.where(card_distribution[1, leading_player_id, :] == 1)[0].tolist()
                 assert len(leading_card_idx) == 1
                 leading_card_idx = leading_card_idx[0]
-                playing_suit = utils.ORDERED_CARDS[leading_card_idx].get_suit()
+                playing_suit = utils.ORDERED_CARDS[leading_card_idx].suit
             
                 valid_hand_card_indices = self._get_valid_hand_card_indices(hand_card_indices, playing_suit)
                 mask = np.ones((self.action_size,), dtype=int)

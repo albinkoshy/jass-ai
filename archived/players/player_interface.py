@@ -45,7 +45,7 @@ class IPlayer(ABC):
 
         total_points = 0
         for card in self.won_tricks:
-            total_points += top_down_scoring[card.get_rank()]
+            total_points += top_down_scoring[card.rank]
 
         # Reset won_tricks
         self.won_tricks = []

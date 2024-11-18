@@ -14,6 +14,7 @@ class JassEnv:
         
         self.hands = None
         self.trick = None
+        self.game_type = None
         
         self.n_tricks = None
         
@@ -44,6 +45,10 @@ class JassEnv:
         if self.print_globals:
             self._print_hands()
             print(f"P{self.starting_player_id} is starting the round")
+        
+        self.game_type = None # Which game type is played for this round, one of these: ["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE", "SCHIEBEN"]
+                              # If the starting player chooses 'SCHIEBEN', his team mate has to set the game type (all of above except 'SCHIEBEN')
+        Trick.game_type = None
         
         self.n_tricks = 0
         
@@ -158,7 +163,7 @@ class JassEnv:
         self.trick.trick[f"P{player_id}"] = card
         if self.leading_player_id == player_id:
             # Leading player determines the suit of the trick
-            self.trick.set_suit(card=card)
+            self.trick.playing_suit = card.suit
         
         if self.print_globals:
             if self.leading_player_id == player_id:
@@ -168,74 +173,22 @@ class JassEnv:
         # Update current turn
         self.current_turn = (self.current_turn + 1) % 4
     
+    def set_game_type(self, game_type: str, is_geschoben: bool = False):
+        assert game_type in ["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE"], "Invalid game type"
+        self.game_type = game_type
+        Trick.game_type = game_type
+        
+        if self.print_globals:
+            if is_geschoben:
+                team_mate_id = (self.starting_player_id + 2) % 4
+                print(f"Geschoben. P{team_mate_id} chooses: {game_type}")
+            else:
+                print(f"P{self.starting_player_id} chooses: {game_type}")
+    
     def _get_state(self):
         return {
             'hands': self.hands,
             'trick': self.trick,
             'leading_player_id': self.leading_player_id,
+            'game_type': self.game_type
         }
-
-
-import copy
-from agents.random_agent import Random_Agent
-
-if __name__ == "__main__":
-    
-    """ Test JassEnv """
-    
-    # Player table
-    #   P2
-    # P3  P1
-    #   P0
-    
-    # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    players = [Random_Agent(player_id=0, team_id=0),
-               Random_Agent(player_id=1, team_id=1),
-               Random_Agent(player_id=2, team_id=0),
-               Random_Agent(player_id=3, team_id=1)]
-    
-    # Initialize the environment
-    env = JassEnv(players=players)
-    starting_player_id = 0
-    
-    state = env.reset(starting_player_id=starting_player_id)
-    current_turn = env.get_current_turn()
-    done = False
-    
-    # Keep track of state, action pair for each player
-    state_action_pairs = {
-        "P0": {"state": None, "action": None},
-        "P1": {"state": None, "action": None},
-        "P2": {"state": None, "action": None},
-        "P3": {"state": None, "action": None}
-    }
-    
-    while not done:
-        
-        if state_action_pairs[f"P{current_turn}"]["state"] is not None:
-            state_ = copy.deepcopy(state_action_pairs[f"P{current_turn}"]["state"]) # The state before the current player played
-            action = state_action_pairs[f"P{current_turn}"]["action"] # The action the current player played before
-            reward = 0 # Reward for the current player (Reward is only given at the end of the trick)
-            next_state = copy.deepcopy(state) # The state after the current player played
-            done = False # Done is only True at the end of the game
-            players[current_turn].remember(state_, action, reward, next_state, done)
-
-        action = players[current_turn].act(state)
-        new_state, rewards, done = env.step(action)
-        
-        state_action_pairs[f"P{current_turn}"]["state"] = copy.deepcopy(state)
-        state_action_pairs[f"P{current_turn}"]["action"] = action
-
-        current_turn = env.get_current_turn()
-
-        state = copy.deepcopy(new_state)
-        
-    # Remember the transition for all players
-    for player in players:
-        state_ = copy.deepcopy(state_action_pairs[f"P{player.player_id}"]["state"])
-        action = state_action_pairs[f"P{player.player_id}"]["action"]
-        reward = rewards[player.player_id]
-        next_state = copy.deepcopy(state)
-        done = True
-        player.remember(state_, action, reward, next_state, done)
-    

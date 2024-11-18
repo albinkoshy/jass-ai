@@ -61,9 +61,3 @@ class Card:
             "ASS": "A",
         }
         return f"{representation_suit[str(self.suit.name)]}{representation_rank[str(self.rank.name)]}"
-
-    def get_suit(self) -> Suit:
-        return self.suit
-
-    def get_rank(self) -> Rank:
-        return self.rank

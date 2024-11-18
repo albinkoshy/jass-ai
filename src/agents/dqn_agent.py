@@ -37,6 +37,7 @@ class DQN_Agent(IAgent):
         self.hand = None
         self.is_starting_trick = None
         self.playing_suit = None
+        self.game_type = None
 
         self.state_size = 292
         self.action_size = 36
@@ -138,6 +139,7 @@ class DQN_Agent(IAgent):
         self.hand = None
         self.is_starting_trick = None
         self.playing_suit = None
+        self.game_type = None
         self.memory.reset()
         self.num_optimizations = 0
         self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
@@ -161,7 +163,7 @@ class DQN_Agent(IAgent):
         
         self.hand = state["hands"][f"P{self.player_id}"]
         leading_player_id = state["leading_player_id"]
-        # play_style = state[2]
+        self.game_type = state["game_type"]
         
         if leading_player_id == self.player_id:
             self.is_starting_trick = True
@@ -214,7 +216,7 @@ class DQN_Agent(IAgent):
         return masked_q_values
     
     def _get_valid_hand(self, hand, playing_suit) -> list:
-        valid_hand = [card for card in hand if card.get_suit() == playing_suit]
+        valid_hand = [card for card in hand if card.suit == playing_suit]
         return valid_hand if valid_hand else hand
     
     def _random_valid_action(self) -> int:
@@ -301,3 +303,13 @@ class DQN_Agent(IAgent):
         dones = torch.tensor(dones, dtype=torch.int64, device=self.device).reshape(self.batch_size, -1)
         
         return states, actions, rewards, next_states, dones
+    
+    def choose_game_type(self, state, is_geschoben: str = False) -> str:
+        
+        if is_geschoben:
+            pass
+        
+        state = copy.deepcopy(state)
+        hand = state["hands"][f"P{self.player_id}"]
+        pass
+    

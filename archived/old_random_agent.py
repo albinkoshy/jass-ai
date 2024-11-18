@@ -65,7 +65,7 @@ class Random_Agent(IAgent):
             assert len(leading_card_idx) == 1
             leading_card_idx = leading_card_idx[0]
             self.is_starting_trick = False
-            self.playing_suit = utils.ORDERED_CARDS[leading_card_idx].get_suit()
+            self.playing_suit = utils.ORDERED_CARDS[leading_card_idx].suit
 
     def _get_valid_hand_card_indices(self) -> list:
         if self.playing_suit == Suit.ROSE:  # (0, 8)
