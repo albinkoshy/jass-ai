@@ -15,6 +15,7 @@ class JassEnv:
         self.hands = None
         self.trick = None
         self.game_type = None
+        self.is_geschoben = None
         
         self.n_tricks = None
         
@@ -49,6 +50,7 @@ class JassEnv:
         self.game_type = None # Which game type is played for this round, one of these: ["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE", "SCHIEBEN"]
                               # If the starting player chooses 'SCHIEBEN', his team mate has to set the game type (all of above except 'SCHIEBEN')
         Trick.game_type = None
+        self.is_geschoben = False # True if the game type was set by the team mate of the starting player, False otherwise
         
         self.n_tricks = 0
         
@@ -177,6 +179,7 @@ class JassEnv:
         assert game_type in ["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE"], "Invalid game type"
         self.game_type = game_type
         Trick.game_type = game_type
+        self.is_geschoben = is_geschoben
         
         if self.print_globals:
             if is_geschoben:
@@ -190,5 +193,6 @@ class JassEnv:
             'hands': self.hands,
             'trick': self.trick,
             'leading_player_id': self.leading_player_id,
-            'game_type': self.game_type
+            'game_type': self.game_type,
+            'is_geschoben': self.is_geschoben
         }

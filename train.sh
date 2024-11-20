@@ -1,10 +1,10 @@
 #!/bin/bash
 
 N_EPISODES=250000
-HIDDEN_SIZES=("128,128" "256,256" "256,128,64")
+HIDDEN_SIZES=("128,64" "128,128" "256,256" "256,128,64")
 GAMMA=(0.99 1)
 TAU_VALUES=(0.005)
-LR_VALUES=(0.00005)
+LR_VALUES=(0.00005 0.0001)
 # Loss function
 # activation function
 # Replay buffer size

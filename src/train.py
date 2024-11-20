@@ -71,12 +71,14 @@ def train_agent(args):
         
         state = env.reset(starting_player_id=starting_player_id)
         
+        is_geschoben = False
         game_type = players[starting_player_id].choose_game_type(state=state)
         if game_type ==  "SCHIEBEN":
+            is_geschoben = True
             team_mate_id = (starting_player_id + 2) % 4
             game_type = players[team_mate_id].choose_game_type(state=state, is_geschoben=True)
         
-        env.set_game_type(game_type)
+        env.set_game_type(game_type, is_geschoben)
         
         current_turn = env.get_current_turn()
         done = False

@@ -8,8 +8,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from agents.agent_interface import IAgent
+import utils
 from utils import Q_Net, ReplayMemory, soft_update
+from agents.agent_interface import IAgent
+from envs.card import Suit
 
 
 class DQN_Agent(IAgent):
@@ -39,7 +41,7 @@ class DQN_Agent(IAgent):
         self.playing_suit = None
         self.game_type = None
 
-        self.state_size = 292
+        self.state_size = 300
         self.action_size = 36
         self.hidden_sizes = hidden_sizes
         self.batch_size = batch_size
@@ -82,7 +84,6 @@ class DQN_Agent(IAgent):
             self.network.eval()
             with torch.no_grad():
                 q_values = self.network(state)
-            self.network.train()
             
             # Mask invalid actions to -inf
             q_values = self._mask_invalid_actions(q_values)
@@ -190,14 +191,23 @@ class DQN_Agent(IAgent):
         
         leading_pid_encoding = np.zeros(4, dtype=int)
         if state["leading_player_id"] is not None: # If game is not done (state["leading_player_id"] is None after game is done)
-            leading_pid_encoding = np.zeros(4, dtype=int)
             leading_pid = (state["leading_player_id"] - self.player_id) % 4
-            leading_pid_encoding = np.eye(4)[leading_pid]
+            leading_pid_encoding = np.eye(4, dtype=int)[leading_pid]
+            
+        if state["is_geschoben"] == True and state["game_type"] == "SCHIEBEN":
+            raise ValueError("Game type SCHIEBEN cannot be set if is_geschoben is True")
+        
+        game_type_encoding = np.zeros(7, dtype=int)
+        if state["game_type"] is not None: # If game type was set
+            game_type_idx = utils.GAME_TYPES.index(state["game_type"]) # Either one of in utils.GAME_TYPES
+            game_type_encoding = np.eye(7, dtype=int)[game_type_idx]
+        
+        is_geschoben_encoding = np.array([1 if state["is_geschoben"] else 0])
         
         hands_encoding = hands_encoding.flatten()
         trick_encoding = trick_encoding.flatten()
         
-        state_encoding = np.concatenate([hands_encoding, trick_encoding, leading_pid_encoding])
+        state_encoding = np.concatenate([hands_encoding, trick_encoding, leading_pid_encoding, game_type_encoding, is_geschoben_encoding])
         
         return state_encoding
     
@@ -209,14 +219,22 @@ class DQN_Agent(IAgent):
             masked_q_values[:, hand_card_indices] = q_values[:, hand_card_indices]
             return masked_q_values
 
-        valid_hand = self._get_valid_hand(hand=self.hand, playing_suit=self.playing_suit)
+        valid_hand = self._get_valid_hand(hand=self.hand, playing_suit=self.playing_suit, game_type=self.game_type)
         valid_hand_card_indices = [card.index for card in valid_hand]
         masked_q_values = torch.ones_like(q_values) * -1e7
         masked_q_values[:, valid_hand_card_indices] = q_values[:, valid_hand_card_indices]
         return masked_q_values
     
-    def _get_valid_hand(self, hand, playing_suit) -> list:
-        valid_hand = [card for card in hand if card.suit == playing_suit]
+    def _get_valid_hand(self, hand, playing_suit, game_type) -> list:
+        if game_type in ["ROSE", "SCHILTE", "EICHEL", "SCHELLE"]:
+            trump_suit = getattr(Suit, game_type)
+        else:
+            trump_suit = None
+        
+        valid_hand = [card for card in hand if card.suit == playing_suit or card.suit == trump_suit]
+ 
+        if trump_suit and playing_suit != trump_suit and all(card.suit == trump_suit for card in valid_hand):
+            return hand
         return valid_hand if valid_hand else hand
     
     def _random_valid_action(self) -> int:
@@ -227,7 +245,7 @@ class DQN_Agent(IAgent):
             return card_idx
 
         # Choose randomly from valid options
-        valid_hand = self._get_valid_hand(hand=self.hand, playing_suit=self.playing_suit)
+        valid_hand = self._get_valid_hand(hand=self.hand, playing_suit=self.playing_suit, game_type=self.game_type)
 
         card = random.choice(valid_hand)
         self.hand.remove(card)
@@ -247,9 +265,10 @@ class DQN_Agent(IAgent):
                 mask[hand_card_indices] = 0
                 states_masks[i] = mask
             else:
-                # Mask for cards that are not in hand and do not follow the playing suit
+                # Mask for cards that are not in hand and do not follow the playing suit and are not trump
                 playing_suit = state["trick"].playing_suit
-                valid_hand = self._get_valid_hand(hand=hand, playing_suit=playing_suit)
+                game_type = state["game_type"]
+                valid_hand = self._get_valid_hand(hand=hand, playing_suit=playing_suit, game_type=game_type)
                 valid_hand_card_indices = [card.index for card in valid_hand]
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[valid_hand_card_indices] = 0
@@ -273,9 +292,10 @@ class DQN_Agent(IAgent):
                 mask[hand_card_indices] = 0
                 next_states_masks[j] = mask
             else:
-                # Mask for cards that are not in hand and do not follow the playing suit
+                # Mask for cards that are not in hand and do not follow the playing suit and are not trump
                 playing_suit = next_state["trick"].playing_suit
-                valid_hand = self._get_valid_hand(hand=hand, playing_suit=playing_suit)
+                game_type = state["game_type"]
+                valid_hand = self._get_valid_hand(hand=hand, playing_suit=playing_suit, game_type=game_type)
                 valid_hand_card_indices = [card.index for card in valid_hand]
                 mask = np.ones((self.action_size,), dtype=int)
                 mask[valid_hand_card_indices] = 0
@@ -306,10 +326,29 @@ class DQN_Agent(IAgent):
     
     def choose_game_type(self, state, is_geschoben: str = False) -> str:
         
-        if is_geschoben:
-            pass
-        
+        assert state["game_type"] is None, "Game type should not have been set"
         state = copy.deepcopy(state)
-        hand = state["hands"][f"P{self.player_id}"]
-        pass
+        state["is_geschoben"] = is_geschoben
+        
+        n_game_types = 7 # All game types
+        if is_geschoben:
+            n_game_types = 6 # All game types except "SCHIEBEN"
+        
+        best_q_value = -1e7
+        best_game_type = None
+        self.network.eval()
+        for i in range(n_game_types):
+            game_type = utils.GAME_TYPES[i]
+            state["game_type"] = game_type
+            state_onehot_encoded = self._encode_state(state)
+            state_tensor = torch.tensor(state_onehot_encoded, dtype=torch.float, device=self.device).reshape(1, -1)
+            with torch.no_grad():
+                q_values = self.network(state_tensor)
+            max_q_value = torch.max(q_values).item()
+            
+            if max_q_value > best_q_value:
+                best_q_value = max_q_value
+                best_game_type = game_type
+        
+        return best_game_type
     
