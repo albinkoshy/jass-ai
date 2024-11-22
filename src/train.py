@@ -10,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from agents.random_agent import Random_Agent
 from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
+from agents.double_dqn_agent import Double_DQN_Agent
 from envs.jassenv import JassEnv
 import utils
 
@@ -35,7 +36,8 @@ def train_agent(args):
     epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
     
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    dqn_agent = DQN_Agent(player_id=0, 
+    AGENT_TYPE = "double_dqn"
+    agent = Double_DQN_Agent(player_id=0, 
                           team_id=0, 
                           hidden_sizes=args.hidden_sizes,
                           epsilon_decay=epsilon_decay, 
@@ -44,7 +46,7 @@ def train_agent(args):
                           lr=args.lr, 
                           device=device)
     
-    players = [dqn_agent,
+    players = [agent,
                Greedy_Agent(player_id=1, team_id=1),
                Greedy_Agent(player_id=2, team_id=0),
                Greedy_Agent(player_id=3, team_id=1)]
@@ -141,7 +143,7 @@ def train_agent(args):
                 # Save to log_dir
                 directory = os.path.join(args.log_dir, f"models/P{player.player_id}_{player.__class__.__name__}")
                 hidden_sizes_hyphen = "-".join(map(str, args.hidden_sizes))
-                player.save_model(name=f"dqn_agent_{hidden_sizes_hyphen}_{episode}.pt", directory=directory)
+                player.save_model(name=f"{AGENT_TYPE}_{hidden_sizes_hyphen}_{episode}.pt", directory=directory)
                 
         starting_player_id = (starting_player_id + 1) % 4
             
