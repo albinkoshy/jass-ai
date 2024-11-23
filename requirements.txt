@@ -6,3 +6,4 @@ tensorboard==2.18.0
 matplotlib==3.9.2
 pandas==2.2.3
 tqdm==4.67.0
+inquirer==3.4.0

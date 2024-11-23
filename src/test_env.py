@@ -1,6 +1,7 @@
 import copy
 from agents.random_agent import Random_Agent
 from agents.greedy_agent import Greedy_Agent
+from agents.human_agent import Human_Agent
 from agents.dqn_agent import DQN_Agent
 from envs.jassenv import JassEnv
 
@@ -15,10 +16,10 @@ PRINT_ENV = True
 #   P0
 
 # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-players = [DQN_Agent(player_id=0, team_id=0),
-            DQN_Agent(player_id=1, team_id=1),
-            DQN_Agent(player_id=2, team_id=0),
-            DQN_Agent(player_id=3, team_id=1)]
+players = [Human_Agent(player_id=0, team_id=0),
+            Greedy_Agent(player_id=1, team_id=1),
+            Greedy_Agent(player_id=2, team_id=0),
+            Greedy_Agent(player_id=3, team_id=1)]
 
 # Initialize the environment
 env = JassEnv(players=players, print_globals=PRINT_ENV)
