@@ -110,16 +110,18 @@ class Double_DQN_Agent(IAgent):
         
         q_values = self.network(states)
         q_values = torch.where(states_masks, -1e7, q_values)
-        pred_q_values = q_values.gather(dim=1, index=actions)  # Get Q-Values for the actions
+        q_values = q_values.gather(dim=1, index=actions)  # Get Q-Values for the actions
         
         with torch.no_grad():
-            max_actions = q_values.argmax(dim=1, keepdim=True)
-            next_q_values = self.target_net(next_states)
+            next_q_values = self.network(next_states)
             next_q_values = torch.where(next_states_masks, -1e7, next_q_values)
-            next_q_values = next_q_values.gather(dim=1, index=max_actions)  # Double DQN: Decouple action selection and evaluation
-            expected_q_values = rewards + (1 - dones) * self.gamma * next_q_values
+            max_actions = next_q_values.argmax(dim=1, keepdim=True)
+            next_q_values_t = self.target_net(next_states)
+            next_q_values_t = torch.where(next_states_masks, -1e7, next_q_values_t)
+            next_q_values_t = next_q_values_t.gather(dim=1, index=max_actions)  # Double DQN: Decouple action selection and evaluation
+            expected_q_values = rewards + (1 - dones) * self.gamma * next_q_values_t
 
-        loss = self.criterion(pred_q_values, expected_q_values)
+        loss = self.criterion(q_values, expected_q_values)
         self.optimizer.zero_grad() # Set all gradients (.grad) to zero to avoid accumulation
         loss.backward() # Compute gradients of the loss w.r.t. the parameters (stored in .grad)
         self.optimizer.step() # Perform gradient descent by adjusting the weights by its gradients stored in .grad
