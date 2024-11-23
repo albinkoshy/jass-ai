@@ -76,7 +76,7 @@ class Random_Agent(IAgent):
             return self.hand
         return valid_hand if valid_hand else self.hand
 
-    def choose_game_type(self, state, is_geschoben: str = False) -> str:
+    def choose_game_type(self, state, is_geschoben: bool = False) -> str:
         # Choose game type randomly
         if is_geschoben:
             game_type = random.choice(["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE"])

@@ -1,7 +1,6 @@
 import copy
 import os
 import random
-from typing import Union
 
 import numpy as np
 import torch
@@ -88,7 +87,6 @@ class DQN_Agent(IAgent):
             # Mask invalid actions to -inf
             q_values = self._mask_invalid_actions(q_values)
             action = torch.argmax(q_values).item()
-            return action
         else:
             # Exploration
             action = self._random_valid_action()
@@ -324,31 +322,42 @@ class DQN_Agent(IAgent):
         
         return states, actions, rewards, next_states, dones
     
-    def choose_game_type(self, state, is_geschoben: str = False) -> str:
+    def choose_game_type(self, state, is_geschoben: bool = False) -> str:
         
         assert state["game_type"] is None, "Game type should not have been set"
         state = copy.deepcopy(state)
         state["is_geschoben"] = is_geschoben
         
-        n_game_types = 7 # All game types
-        if is_geschoben:
-            n_game_types = 6 # All game types except "SCHIEBEN"
-        
-        best_q_value = -1e7
-        best_game_type = None
-        self.network.eval()
-        for i in range(n_game_types):
-            game_type = utils.GAME_TYPES[i]
-            state["game_type"] = game_type
-            state_onehot_encoded = self._encode_state(state)
-            state_tensor = torch.tensor(state_onehot_encoded, dtype=torch.float, device=self.device).reshape(1, -1)
-            with torch.no_grad():
-                q_values = self.network(state_tensor)
-            max_q_value = torch.max(q_values).item()
+        # Epsilon-greedy policy
+        if random.random() > self.epsilon or self.deterministic:
+            # Exploitation
+            n_game_types = 7 # All game types
+            if is_geschoben:
+                n_game_types = 6 # All game types except "SCHIEBEN"
             
-            if max_q_value > best_q_value:
-                best_q_value = max_q_value
-                best_game_type = game_type
+            best_q_value = -1e7
+            best_game_type = ""
+            self.network.eval()
+            for i in range(n_game_types):
+                game_type = utils.GAME_TYPES[i]
+                state["game_type"] = game_type
+                state_onehot_encoded = self._encode_state(state)
+                state_tensor = torch.tensor(state_onehot_encoded, dtype=torch.float, device=self.device).reshape(1, -1)
+                with torch.no_grad():
+                    q_values = self.network(state_tensor)
+                max_q_value = torch.max(q_values).item()
+                
+                if max_q_value > best_q_value:
+                    best_q_value = max_q_value
+                    best_game_type = game_type
+            
+            return best_game_type
+        else:
+            # Exploration
+            if is_geschoben:
+                game_type = random.choice(["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE"])
+                return game_type
         
-        return best_game_type
+            game_type = random.choice(["TOP_DOWN", "BOTTOM_UP", "ROSE", "SCHILTE", "EICHEL", "SCHELLE", "SCHIEBEN"])
+            return game_type
     

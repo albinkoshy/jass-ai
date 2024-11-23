@@ -89,7 +89,7 @@ class Greedy_Agent(IAgent):
         card_idx = card.index
         return card_idx
     
-    def choose_game_type(self, state, is_geschoben: str = False) -> str:
+    def choose_game_type(self, state, is_geschoben: bool = False) -> str:
         
         # Allow some randomness for choosing "SCHIEBEN"
         if not is_geschoben and random.random() < 0.14:

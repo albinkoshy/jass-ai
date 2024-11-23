@@ -5,7 +5,7 @@ import argparse
 from collections import deque
 import torch
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 
 from agents.random_agent import Random_Agent
 from agents.greedy_agent import Greedy_Agent
