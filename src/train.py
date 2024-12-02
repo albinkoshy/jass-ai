@@ -1,5 +1,6 @@
 import copy
 import os
+import csv
 import random
 import argparse
 from collections import deque
@@ -82,6 +83,9 @@ def train_agent(args):
     
     rewards_list = [deque([], maxlen=1000), deque([], maxlen=1000), deque([], maxlen=1000), deque([], maxlen=1000)]
     writer = SummaryWriter(os.path.join(args.log_dir, "tensorboard"))
+    csv_file = open(os.path.join(args.log_dir, "log.csv"), mode='w')
+    writer_csv = csv.DictWriter(csv_file, fieldnames=['player', 'episode', 'avg_reward', 'loss', 'epsilon'])
+    writer_csv.writeheader()
     
     print("Training agent...")
     # Summary of used hyperparameters
@@ -166,6 +170,8 @@ def train_agent(args):
                     writer.add_scalar(f"AVG_Reward/P{player.player_id}", avg_reward, episode)
                     writer.add_scalar(f"Loss/P{player.player_id}", loss, episode)
                     writer.add_scalar(f"Epsilon/P{player.player_id}", player.epsilon, episode)
+                    
+                    writer_csv.writerow({'player': f'P{player.player_id}', 'episode': episode, 'avg_reward': avg_reward, 'loss': loss, 'epsilon': player.epsilon})
         
         if episode % SAVE_MODEL_EVERY == 0:
             # Save the model
@@ -176,7 +182,8 @@ def train_agent(args):
                 player.save_model(name=f"{AGENT_TYPE}_{hidden_sizes_hyphen}_{episode}.pt", directory=directory)
                 
         starting_player_id = (starting_player_id + 1) % 4
-            
+    
+    csv_file.close()
             
 if __name__ == "__main__":
     
@@ -216,7 +223,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--gamma',
                         type=float,
-                        default=0.99,
+                        default=1,
                         help='discount factor for the reward')
     
     parser.add_argument('--tau',

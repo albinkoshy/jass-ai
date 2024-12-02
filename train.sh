@@ -2,12 +2,12 @@
 
 N_EPISODES=500000
 AGENT=("dqn", "double_dqn")
-HIDDEN_SIZES=("128,64" "128,128" "256,256")
+HIDDEN_SIZES=("128,128" "256,256")
 ACTIVATION=("relu" "tanh" "sigmoid")
 BATCH_SIZE=(512)
 GAMMA=(1)
 TAU=(0.005)
-LR=(0.00005 0.0001)
+LR=(0.00005)
 BUFFER_SIZE=(50000)
 LOSS=("smooth_l1" "mse")
 
