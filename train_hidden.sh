@@ -1,7 +1,7 @@
 #!/bin/bash
 
 N_EPISODES=500000
-AGENT=("dqn", "double_dqn")
+AGENT=("dqn" "double_dqn")
 HIDDEN_SIZES=("128,128" "256,256")
 ACTIVATION=("relu" "tanh" "sigmoid")
 BATCH_SIZE=(512)
