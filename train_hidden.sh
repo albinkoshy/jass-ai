@@ -30,7 +30,7 @@ for agent in "${AGENT[@]}"; do
                                     fi
 
                                     hidden_sizes_hyphen=$(echo "${hidden_sizes}" | tr ',' '-')
-                                    run_string="run_${N_EPISODES}_${hidden_sizes_hyphen}_${activation}_${batch_size}_${gamma}_${tau}_${lr}_${buffer_size}_${loss}"
+                                    run_string="run_${agent}_${N_EPISODES}_${hidden_sizes_hyphen}_${activation}_${batch_size}_${gamma}_${tau}_${lr}_${buffer_size}_${loss}"
                                     log_dir="./logs/${run_string}"
                                     output_file="./output_logs/${run_string}.out"
 
