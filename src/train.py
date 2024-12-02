@@ -14,7 +14,9 @@ from agents.double_dqn_agent import Double_DQN_Agent
 from envs.jassenv import JassEnv
 import utils
 
-utils.seed_everything(random.randint(1, 999999), deterministic=False)
+# seed = random.randint(1, 999999)
+seed = 42
+utils.seed_everything(seed, deterministic=True)
 
 PRINT_ENV = False
 
@@ -36,15 +38,38 @@ def train_agent(args):
     epsilon_decay: float = epsilon_min ** (1 / (percentage_above_epsilon_min * N_EPISODES))
     
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    AGENT_TYPE = "double_dqn"
-    agent = Double_DQN_Agent(player_id=0, 
-                          team_id=0, 
-                          hidden_sizes=args.hidden_sizes,
-                          epsilon_decay=epsilon_decay, 
-                          gamma=args.gamma, 
-                          tau=args.tau, 
-                          lr=args.lr, 
-                          device=device)
+    if args.agent == "dqn":
+        AGENT_TYPE = args.agent
+        agent = DQN_Agent(player_id=0, 
+                            team_id=0,
+                            hide_opponents_hands=args.hide_opponents_hands,
+                            hidden_sizes=args.hidden_sizes,
+                            activation=args.activation,
+                            batch_size=args.batch_size,
+                            epsilon_decay=epsilon_decay, 
+                            gamma=args.gamma, 
+                            tau=args.tau, 
+                            lr=args.lr,
+                            replay_memory_capacity=args.replay_buffer_size,
+                            loss=args.loss,
+                            device=device)
+    elif args.agent == "double_dqn":
+        AGENT_TYPE = args.agent
+        agent = Double_DQN_Agent(player_id=0, 
+                            team_id=0,
+                            hide_opponents_hands=args.hide_opponents_hands,
+                            hidden_sizes=args.hidden_sizes,
+                            activation=args.activation,
+                            batch_size=args.batch_size,
+                            epsilon_decay=epsilon_decay, 
+                            gamma=args.gamma, 
+                            tau=args.tau, 
+                            lr=args.lr,
+                            replay_memory_capacity=args.replay_buffer_size,
+                            loss=args.loss,
+                            device=device)
+    else:
+        raise ValueError("Invalid agent type")
     
     players = [agent,
                Greedy_Agent(player_id=1, team_id=1),
@@ -62,10 +87,15 @@ def train_agent(args):
     # Summary of used hyperparameters
     print("Hyperparameters:")
     print(f"    Number of episodes: {N_EPISODES}")
+    print(f"    Hide opponents hands: {args.hide_opponents_hands}")
     print(f"    Hidden sizes: {args.hidden_sizes}")
+    print(f"    Activation function: {args.activation}")
+    print(f"    Batch size: {args.batch_size}")
     print(f"    Gamma: {args.gamma}")
     print(f"    Tau: {args.tau}")
     print(f"    Learning rate: {args.lr}")
+    print(f"    Replay buffer size: {args.replay_buffer_size}")
+    print(f"    Loss function: {args.loss}")
     print(f"    Log directory: {args.log_dir}")
     
     # Training loop
@@ -150,18 +180,39 @@ def train_agent(args):
             
 if __name__ == "__main__":
     
-    parser = argparse.ArgumentParser(description='Train agent')
+    parser = argparse.ArgumentParser(description='Train agent against greedy players')
     
     # Add arguments
+    parser.add_argument('--agent',
+                        type=str,
+                        choices=["dqn", "double_dqn"],
+                        required=True,
+                        help='type of agent to train')
+    
     parser.add_argument('--n_episodes', 
                         type=int, 
                         default=10000, 
                         help='number of episodes to train the agent')
     
+    parser.add_argument('--hide_opponents_hands',
+                        action='store_true',
+                        help='whether to hide opponents hands from the agent')
+    
     parser.add_argument('--hidden_sizes', 
                         type=lambda s: [int(item) for item in s.split(',')], 
                         default="256,256,256", 
                         help='hidden sizes of the neural network, input comma separated without spaces (e.g. "256,256,256")')
+    
+    parser.add_argument('--activation',
+                        type=str,
+                        choices=["relu", "tanh", "sigmoid"],
+                        default="relu",
+                        help='activation function to use, either "relu", "tanh" or "sigmoid"')
+    
+    parser.add_argument('--batch_size', 
+                        type=int, 
+                        default=512, 
+                        help='batch size for training the neural network')
     
     parser.add_argument('--gamma',
                         type=float,
@@ -177,6 +228,17 @@ if __name__ == "__main__":
                         type=float,
                         default=0.00005,
                         help='learning rate for the adam optimizer')
+    
+    parser.add_argument('--replay_buffer_size', 
+                        type=int, 
+                        default=50000, 
+                        help='size of the replay buffer')
+    
+    parser.add_argument('--loss',
+                        type=str,
+                        choices=["smooth_l1", "mse"],
+                        default="smooth_l1",
+                        help='loss function to use, either "mse" or "smooth_l1"')
     
     parser.add_argument('--log_dir', 
                         type=str, 

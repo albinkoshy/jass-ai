@@ -88,7 +88,7 @@ class Q_Net(nn.Module):
     Fully connected neural network. This class implements a neural network with a variable number of hidden layers and hidden units.
     """
 
-    def __init__(self, state_size, action_size, layer_sizes):
+    def __init__(self, state_size, action_size, layer_sizes, activation="relu"):
         super().__init__()
 
         self.layers = nn.ModuleList()
@@ -97,7 +97,14 @@ class Q_Net(nn.Module):
             self.layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))  # Hidden layers
         self.output_layer = nn.Linear(layer_sizes[-1], action_size)  # Output layer
 
-        self.activation = nn.functional.relu
+        if activation == "relu":
+            self.activation = nn.functional.relu
+        elif activation == "tanh":
+            self.activation = nn.functional.tanh
+        elif activation == "sigmoid":
+            self.activation = nn.functional.sigmoid
+        else:
+            raise ValueError(f"Activation function {activation} not supported.")
         self.output_activation = nn.functional.sigmoid
         self.apply(weights_init_)
 

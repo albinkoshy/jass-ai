@@ -13,6 +13,7 @@ class JassEnv:
         self.current_turn = None
         
         self.hands = None
+        self.trick_history = None
         self.trick = None
         self.game_type = None
         self.is_geschoben = None
@@ -40,6 +41,7 @@ class JassEnv:
         self.current_turn = starting_player_id # Player who is currently playing a card
         
         self.hands = {f"P{player.player_id}": [] for player in self.players}
+        self.trick_history = []
         self._deal_cards()
         
         self.trick = Trick(leading_player_id=self.leading_player_id)
@@ -95,6 +97,7 @@ class JassEnv:
         # Check if all players have played a card
         if self.current_turn == self.leading_player_id:
             self.n_tricks += 1
+            self.trick_history.append(self.trick.trick)
             # Determine winner of the trick
             trick_winner = self.trick.determine_trick_winner()
             trick_winner_id = int(trick_winner[1])
@@ -192,6 +195,7 @@ class JassEnv:
         return {
             'hands': self.hands,
             'trick': self.trick,
+            'trick_history': self.trick_history,
             'leading_player_id': self.leading_player_id,
             'game_type': self.game_type,
             'is_geschoben': self.is_geschoben

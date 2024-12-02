@@ -20,29 +20,35 @@ class DQN_Agent(IAgent):
         player_id,
         team_id,
         deterministic: bool = False,
-        hidden_sizes: list[int] = [256, 256, 256],
+        hide_opponents_hands: bool = False,
+        hidden_sizes: list[int] = [256, 256],
+        activation: str = "relu",
         batch_size: int = 512,
         epsilon_max: float = 1.0,
         epsilon_min: float = 0.01,
         epsilon_decay: float = 0.99999,
         gamma: float = 1.0,
-        tau: float = 5e-3,
-        lr: float = 1e-4,
+        tau: float = 0.005,
+        lr: float = 0.00005,
+        replay_memory_capacity: int = 50000,
+        loss: str = "smooth_l1",
         device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
         self.player_id = player_id
         self.team_id = team_id
         self.deterministic = deterministic
+        self.hide_opponents_hands = hide_opponents_hands
         
         self.hand = None
         self.is_starting_trick = None
         self.playing_suit = None
         self.game_type = None
 
-        self.state_size = 300
+        self.state_size = 300 if not hide_opponents_hands else 336 # not hidden: 4*36+4*36+4+1+7=300, hidden: 1*36+4*36+4+1+7+4*36=336 (hidden includes past played cards)
         self.action_size = 36
         self.hidden_sizes = hidden_sizes
+        self.activation = activation
         self.batch_size = batch_size
 
         # Exploration rate (epsilon-greedy)
@@ -59,16 +65,21 @@ class DQN_Agent(IAgent):
         self.device = device
 
         # Replay Memory
-        self.memory = ReplayMemory(max_capacity=50000, min_capacity=self.batch_size, device=self.device)
+        self.memory = ReplayMemory(max_capacity=replay_memory_capacity, min_capacity=self.batch_size, device=self.device)
 
         self.num_optimizations = 0
 
-        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
-        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
+        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes, self.activation).eval().to(self.device)
+        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes, self.activation).eval().to(self.device)
         self.target_net.load_state_dict(self.network.state_dict())
 
-        #self.criterion = nn.MSELoss(reduction='sum')
-        self.criterion = nn.SmoothL1Loss(reduction='sum', beta=0.01)
+        if loss == "smooth_l1":
+            self.criterion = nn.SmoothL1Loss(reduction='sum', beta=0.01)
+        elif loss == "mse":
+            self.criterion = nn.MSELoss(reduction='sum')
+        else:
+            raise ValueError(f"Loss function {loss} not supported")
+        
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.lr)
 
     def act(self, state):
@@ -141,8 +152,8 @@ class DQN_Agent(IAgent):
         self.game_type = None
         self.memory.reset()
         self.num_optimizations = 0
-        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
-        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes).eval().to(self.device)
+        self.network = Q_Net(self.state_size, self.action_size, self.hidden_sizes, self.activation).eval().to(self.device)
+        self.target_net = Q_Net(self.state_size, self.action_size, self.hidden_sizes, self.activation).eval().to(self.device)
         self.target_net.load_state_dict(self.network.state_dict())
 
     def load_model(self, loadpath: str):
@@ -173,12 +184,17 @@ class DQN_Agent(IAgent):
 
     def _encode_state(self, state) -> np.ndarray:
         
-        hands_encoding = np.zeros((4, 36), dtype=int)
-        player_id = self.player_id
-        for i in range(4):
-            for card in state["hands"][f"P{player_id}"]:
-                hands_encoding[i, card.index] = 1
-            player_id = (player_id + 1) % 4
+        if self.hide_opponents_hands:
+            hands_encoding = np.zeros(36, dtype=int)
+            for card in state["hands"][f"P{self.player_id}"]:
+                hands_encoding[card.index] = 1
+        else:
+            hands_encoding = np.zeros((4, 36), dtype=int)
+            player_id = self.player_id
+            for i in range(4):
+                for card in state["hands"][f"P{player_id}"]:
+                    hands_encoding[i, card.index] = 1
+                player_id = (player_id + 1) % 4
             
         trick_encoding = np.zeros((4, 36), dtype=int)
         if state["trick"] is not None: # If game is not done (state["trick"] is None after game is done)
@@ -191,6 +207,14 @@ class DQN_Agent(IAgent):
         if state["leading_player_id"] is not None: # If game is not done (state["leading_player_id"] is None after game is done)
             leading_pid = (state["leading_player_id"] - self.player_id) % 4
             leading_pid_encoding = np.eye(4, dtype=int)[leading_pid]
+        
+        trick_history_encoding = np.zeros(0, dtype=int) # Include trick history only if opponent cards are hidden
+        if self.hide_opponents_hands:
+            trick_history_encoding = np.zeros((4, 36), dtype=int)
+            for trick in state["trick_history"]:
+                for p, card in trick.items():
+                    p_id = (int(p[1]) - self.player_id) % 4
+                    trick_history_encoding[p_id, card.index] = 1
             
         if state["is_geschoben"] == True and state["game_type"] == "SCHIEBEN":
             raise ValueError("Game type SCHIEBEN cannot be set if is_geschoben is True")
@@ -204,8 +228,9 @@ class DQN_Agent(IAgent):
         
         hands_encoding = hands_encoding.flatten()
         trick_encoding = trick_encoding.flatten()
+        trick_history_encoding = trick_history_encoding.flatten()
         
-        state_encoding = np.concatenate([hands_encoding, trick_encoding, leading_pid_encoding, game_type_encoding, is_geschoben_encoding])
+        state_encoding = np.concatenate([hands_encoding, trick_encoding, leading_pid_encoding, trick_history_encoding, game_type_encoding, is_geschoben_encoding])
         
         return state_encoding
     

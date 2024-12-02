@@ -37,6 +37,7 @@ for agent in "${AGENT[@]}"; do
                                     sbatch -n 1 --mem-per-cpu=2048 --time=11:00:00 --output="${output_file}" --wrap="python src/train.py \
                                     --agent=${agent} \
                                     --n_episodes=${N_EPISODES} \
+                                    --hide_opponents_hands \
                                     --hidden_sizes=${hidden_sizes} \
                                     --activation=${activation} \
                                     --batch_size=${batch_size} \
@@ -64,7 +65,7 @@ JOB_INFO="./job_info.txt"
 {
     echo "N_EPISODES = ${N_EPISODES[*]}"
     echo "AGENT = ${AGENT[*]}"
-    echo "HIDE_OPPONENTS_HANDS = False"
+    echo "HIDE_OPPONENTS_HANDS = True"
     echo "HIDDEN_SIZES = ${HIDDEN_SIZES[*]}"
     echo "ACTIVATION = ${ACTIVATION[*]}"
     echo "BATCH_SIZE = ${BATCH_SIZE[*]}"
