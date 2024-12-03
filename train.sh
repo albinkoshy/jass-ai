@@ -1,9 +1,9 @@
 #!/bin/bash
 
-N_EPISODES=500000
+N_EPISODES=2000000
 AGENT=("dqn" "double_dqn")
-HIDDEN_SIZES=("128,128" "256,256")
-ACTIVATION=("relu" "tanh" "sigmoid")
+HIDDEN_SIZES=("128,128")
+ACTIVATION=("relu")
 BATCH_SIZE=(512)
 GAMMA=(1)
 TAU=(0.005)
@@ -34,7 +34,7 @@ for agent in "${AGENT[@]}"; do
                                     log_dir="./logs/${run_string}"
                                     output_file="./output_logs/${run_string}.out"
 
-                                    sbatch -n 1 --mem-per-cpu=2048 --time=11:00:00 --output="${output_file}" --wrap="python src/train.py \
+                                    sbatch -n 1 --mem-per-cpu=2048 --time=24:00:00 --output="${output_file}" --wrap="python src/train.py \
                                     --agent=${agent} \
                                     --n_episodes=${N_EPISODES} \
                                     --hidden_sizes=${hidden_sizes} \
