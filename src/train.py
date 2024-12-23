@@ -15,16 +15,15 @@ from agents.double_dqn_agent import Double_DQN_Agent
 from envs.jassenv import JassEnv
 import utils
 
-# seed = random.randint(1, 999999)
-seed = 42
-utils.seed_everything(seed, deterministic=True)
-
 PRINT_ENV = False
 
 def train_agent(args):
     # Use GPU if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
+    # seed = random.randint(1, 999999)
+    seed = args.seed
+    utils.seed_everything(seed, deterministic=True)
     # Player table
     #   P2
     # P3  P1
@@ -101,6 +100,7 @@ def train_agent(args):
     print(f"    Replay buffer size: {args.replay_buffer_size}")
     print(f"    Loss function: {args.loss}")
     print(f"    Log directory: {args.log_dir}")
+    print(f"    Seed: {args.seed}")
     
     # Training loop
     for episode in tqdm(range(1, N_EPISODES+1), desc="Training Episodes"):
@@ -251,6 +251,11 @@ if __name__ == "__main__":
                         type=str, 
                         default='./logs', 
                         help='directory to save the logs')
+    
+    parser.add_argument('--seed',
+                        type=int,
+                        default=42,
+                        help='seed for random number generators')
     
     args = parser.parse_args()
     train_agent(args)

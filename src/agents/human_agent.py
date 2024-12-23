@@ -1,5 +1,5 @@
 import copy
-import  inquirer
+import inquirer
 from agents.agent_interface import IAgent
 from envs.card import Suit
 

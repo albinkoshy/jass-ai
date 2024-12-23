@@ -1,5 +1,4 @@
 import copy
-import os
 import random
 import argparse
 import torch
@@ -9,6 +8,7 @@ from tqdm import tqdm
 from agents.random_agent import Random_Agent
 from agents.greedy_agent import Greedy_Agent
 from agents.dqn_agent import DQN_Agent
+from agents.double_dqn_agent import Double_DQN_Agent
 from envs.jassenv import JassEnv
 import utils
 
@@ -23,13 +23,16 @@ def evaluate_agent(args):
     N_EPISODES = args.n_episodes
     
     # Initialize players: Either learning/trained agents or fixed strategy players. To be passed to JassEnv
-    dqn_agent = DQN_Agent(player_id=0, team_id=0,
-                          hidden_sizes=args.hidden_sizes,
-                          deterministic=True,
-                          device=device)  # Deterministic evaluation
-    dqn_agent.load_model(args.model_path)
+    agent = Double_DQN_Agent(player_id=0, 
+                             team_id=0,
+                             deterministic=True,
+                             hide_opponents_hands=True,
+                             hidden_sizes=args.hidden_sizes,
+                             activation="relu",
+                             device=device) # Deterministic evaluation
+    agent.load_model(args.model_path)
     
-    players = [dqn_agent,
+    players = [agent,
                Greedy_Agent(player_id=1, team_id=1),
                Greedy_Agent(player_id=2, team_id=0),
                Greedy_Agent(player_id=3, team_id=1)]
