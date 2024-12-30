@@ -48,6 +48,10 @@ To evaluate the trained agents, indicate the model_path and specify the layer si
 python src/evaluate.py --model_path=dqn_agent_128-128_500000.pt --n_episodes=10000 --hidden_size=128,128
 ```
 
+## Results
+Please refer to the experiment_results.ipynb and game_type_decisions.ipynb notebooks.
+
 ## References
 
-- RL algorithms: DQN, Double DQN
+- [Schieber Jass rules](https://www.swisslos.ch/en/jass/informations/jass-rules/schieber-jass.html)
+- RL algorithms: [DQN](https://www.nature.com/articles/nature14236), [Double DQN](https://arxiv.org/pdf/1509.06461)
